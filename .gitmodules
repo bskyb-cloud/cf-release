@@ -33,7 +33,7 @@
   url = https://github.com/cloudfoundry/logplex.git
 [submodule "src/collector"]
   path = src/collector
-  url = https://github.com/cloudfoundry/collector.git
+  url = https://github.com/grenzr/collector.git
 [submodule "src/vcap-common"]
 	path = src/vcap-common
 	url = https://github.com/cloudfoundry/vcap-common.git
