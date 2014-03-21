@@ -6,7 +6,7 @@
   url = https://github.com/cloudfoundry/dea.git
 [submodule "src/dea_next"]
   path = src/dea_next
-  url = https://github.com/cloudfoundry/dea_ng.git
+  url = https://github.com/nimbus-cloud/dea_ng.git
 [submodule "src/health_manager_next"]
   path = src/health_manager_next
   url = https://github.com/cloudfoundry/health_manager.git
@@ -24,7 +24,7 @@
   url = https://github.com/cloudfoundry/cloud_controller.git
 [submodule "src/cloud_controller_ng"]
   path = src/cloud_controller_ng
-  url = https://github.com/cloudfoundry/cloud_controller_ng.git
+  url = https://github.com/nimbus-cloud/cloud_controller_ng.git
 [submodule "src/logplex"]
   path = src/logplex
   url = https://github.com/cloudfoundry/logplex.git
@@ -99,7 +99,7 @@
 	url = https://github.com/cloudfoundry/ruby-package
 [submodule "src/uaa"]
 	path = src/uaa
-	url = https://github.com/cloudfoundry/uaa.git
+	url = https://github.com/nimbus-cloud/uaa.git
 [submodule "src/login"]
 	path = src/login
 	url = https://github.com/cloudfoundry/login-server.git
