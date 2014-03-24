@@ -432,8 +432,8 @@ properties:
     disk_overcommit_factor: 2
     staging_disk_inode_limit: 200000
     instance_disk_inode_limit: 200000
-    deny_networks: (( merge || [] ))
-    allow_networks: (( merge || [] ))
+    deny_networks: (( merge || [ "10.0.2.2" ] ))
+    allow_networks: (( merge || [ "0.0.0.0/0" ] ))
     kernel_network_tuning_enabled: true
     directory_server_protocol: https
     evacuation_bail_out_time_in_seconds: 600
