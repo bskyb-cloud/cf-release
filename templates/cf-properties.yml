@@ -6,7 +6,6 @@ meta:
        total_services: 100
        non_basic_services_allowed: true
        total_routes: 1000
-       trial_db_allowed: true
 
 properties:
   domain: (( merge ))
@@ -42,8 +41,6 @@ properties:
       cutoff_age_in_days: 31
 
     billing_event_writing_enabled: true
-
-    process_group: cloud_controller
 
     hm9000_noop: false
     diego: false
@@ -100,7 +97,20 @@ properties:
     quota_definitions: (( merge || meta.default_quota_definitions ))
     default_quota_definition: default
 
+    user_buildpacks: (( merge || [] ))
+    system_buildpacks: (( merge || default_buildpacks ))
+    default_buildpacks:
+      - name: java_buildpack
+        package: buildpack_java
+      - name: ruby_buildpack
+        package: buildpack_ruby
+      - name: nodejs_buildpack
+        package: buildpack_nodejs
+
+    install_buildpacks: (( system_buildpacks user_buildpacks ))
+
   login:
+    url: ~
     catalina_opts: (( merge ))
     uaa_certificate: ~
     protocol: https
@@ -119,6 +129,7 @@ properties:
     no_ssl: false
 
     scim:
+      userids_enabled: (( merge || false ))
       users: (( merge ))
 
     jwt:
@@ -137,8 +148,10 @@ properties:
     
     login:
       addnew: false
+      client_secret: ~
       
     clients:
+      <<: (( merge || nil ))
       login:
         override: true
         scope: openid,oauth.approvals
@@ -186,4 +199,3 @@ properties:
         authorized-grant-types: client_credentials
         access-token-validity: 1209600
         refresh-token-validity: 1209600
-      cc_service_broker_client: ~

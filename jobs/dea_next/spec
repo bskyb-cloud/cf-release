@@ -55,6 +55,9 @@ properties:
   dea_next.disk_overcommit_factor:
     description:
     default: 1
+  dea_next.logging_level:
+    description: "Log level for DEA."
+    default: debug
   dea_next.max_staging_duration:
     description:
     default: 900
@@ -86,8 +89,14 @@ properties:
   dea_next.staging_cpu_limit_shares:
     description: "CPU limit in shares for staging tasks cgroup"
     default: 512
-  dea_next.instance_cpu_limit_shares:
-    description: "CPU limit in shares for running instances cgroup"
+  dea_next.instance_memory_to_cpu_share_ratio:
+    description: "Controls the relationship between app memory and cpu shares. app_cpu_shares = app_memory / cpu_share_factor"
+    default: 8
+  dea_next.instance_min_cpu_share_limit:
+    description: "The minimum number of CPU shares that can be given to an app"
+    default: 1
+  dea_next.instance_max_cpu_share_limit:
+    description: "The maximum number of CPU shares that can be given to an app"
     default: 256
   dea_next.staging_disk_inode_limit:
     description: Limit on inodes for a staging container
@@ -120,4 +129,3 @@ properties:
     default: 3456
   loggregator_endpoint.shared_secret:
     description: "The key used to sign log messages"
-

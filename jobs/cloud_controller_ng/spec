@@ -3,11 +3,11 @@ name: cloud_controller_ng
 templates:
   nginx_ctl.erb: bin/nginx_ctl
   nginx.conf.erb: config/nginx.conf
+  drain.rb: bin/drain
   mime.types: config/mime.types
-  cloud_controller_ng.yml.erb: config/cloud_controller_ng.yml
-  cloud_controller_ng_ctl.erb: bin/cloud_controller_ng_ctl
-  cloud_controller_jobs_ctl.erb: bin/cloud_controller_jobs_ctl
-  cloud_controller_clock_ctl.erb: bin/cloud_controller_clock_ctl
+  cloud_controller_api.yml.erb: config/cloud_controller_ng.yml
+  cloud_controller_api_ctl.erb: bin/cloud_controller_ng_ctl
+  cloud_controller_api_worker_ctl.erb: bin/cloud_controller_worker_ctl
   handle_nfs_or_local_blobstore.sh.erb: bin/handle_nfs_or_local_blobstore.sh
   stacks.yml.erb: config/stacks.yml
   syslog_forwarder.conf.erb: config/syslog_forwarder.conf
@@ -27,6 +27,9 @@ packages:
   - sqlite
   - ruby
   - syslog_aggregator
+  - buildpack_java
+  - buildpack_ruby
+  - buildpack_nodejs
 
 properties:
   ssl.skip_cert_verify:
@@ -58,9 +61,6 @@ properties:
     description:
   description:
     default: "Cloud Foundry sponsored by Pivotal"
-    description:
-  api_version:
-    default: "2.0.0"
     description:
   domain:
     description: "domain where cloud_controller will listen (api.domain) often the same as the system domain"
@@ -244,6 +244,9 @@ properties:
   ccng.packages.app_package_directory_key:
     description: "Directory (bucket) used store app packages.  It does not have be pre-created."
     default: "cc-packages"
+  ccng.packages.max_package_size:
+    description: "Maximum size of application package"
+    default: 536870912
   ccng.packages.fog_connection:
     description: "Fog connection hash"
   ccng.packages.cdn.uri:
@@ -403,15 +406,12 @@ properties:
     default: "off"
     description: "NewRelic's SQL statement recording mode: [off | obfuscated | raw]"
 
-  ccng.process_group:
-    default: cloud_controller
-    description: "Determines what processes to run for the job"
   ccng.jobs.local.number_of_workers:
     default: 2
-    description: "Number of local cloud_controller_jobs workers"
+    description: "Number of local cloud_controller_worker workers"
   ccng.jobs.generic.number_of_workers:
     default: 1
-    description: "Number of generic cloud_controller_jobs workers"
+    description: "Number of generic cloud_controller_worker workers"
 
   dea_next.staging_memory_limit_mb:
     description: "Memory limit in mb for staging tasks"
@@ -429,3 +429,7 @@ properties:
 
   uaa.clients.cc_service_broker_client.secret:
     description: "Used for generating SSO clients for service brokers."
+
+  ccng.install_buildpacks:
+    description: "Set of buildpacks to install during deploy" 
+

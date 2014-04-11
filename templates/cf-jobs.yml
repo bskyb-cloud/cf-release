@@ -23,6 +23,9 @@ meta:
 
   nfs_server: ~
 
+  api_templates:
+  - name: cloud_controller_ng
+
 jobs:
   - name: ha_proxy_z1
     release: (( meta.release.name ))
@@ -151,7 +154,7 @@ jobs:
 
   - name: api_z1
     release: (( meta.release.name ))
-    template: cloud_controller_ng
+    templates: (( merge || meta.api_templates ))
     instances: 1
     resource_pool: large_z1
     persistent_disk: 0
@@ -166,7 +169,7 @@ jobs:
 
   - name: api_z2
     release: (( meta.release.name ))
-    template: cloud_controller_ng
+    templates: (( merge || meta.api_templates ))
     instances: 1
     resource_pool: large_z2
     persistent_disk: 0
@@ -181,7 +184,7 @@ jobs:
 
   - name: clock_global
     release: (( meta.release.name ))
-    template: cloud_controller_ng
+    template: cloud_controller_clock
     instances: 1
     resource_pool: medium_z1
     persistent_disk: 0
@@ -192,12 +195,10 @@ jobs:
       networks: (( meta.networks.z1 ))
       loggregator_endpoint:
         host: (( meta.loggregator_endpoint.z1.host ))
-      ccng:
-        process_group: clock
 
   - name: api_worker_z1
     release: (( meta.release.name ))
-    template: cloud_controller_ng
+    template: cloud_controller_worker
     instances: 1
     resource_pool: small_z1
     persistent_disk: 0
@@ -208,13 +209,11 @@ jobs:
       networks: (( meta.networks.z1 ))
       loggregator_endpoint:
         host: (( meta.loggregator_endpoint.z1.host ))
-      ccng:
-        process_group: worker
       nfs_server: (( meta.nfs_server ))
 
   - name: api_worker_z2
     release: (( meta.release.name ))
-    template: cloud_controller_ng
+    template: cloud_controller_worker
     instances: 1
     resource_pool: small_z2
     persistent_disk: 0
@@ -225,23 +224,15 @@ jobs:
       networks: (( meta.networks.z2 ))
       loggregator_endpoint:
         host: (( meta.loggregator_endpoint.z2.host ))
-      ccng:
-        process_group: worker
       nfs_server: (( meta.nfs_server ))
-
-  - name: hm_z1
-    release: (( meta.release.name ))
-    template: health_manager_next
-    instances: 0
-    resource_pool: medium_z1
-    networks:
-      - name: cf1
-    properties:
-      networks: (( meta.networks.z1 ))
 
   - name: etcd_leader_z1
     release: (( meta.release.name ))
-    template: etcd
+    templates:
+      - name: etcd
+        release: (( meta.release.name ))
+      - name: etcd_metrics_server
+        release: (( meta.release.name ))
     instances: 1
     persistent_disk: 10024
     resource_pool: medium_z1
@@ -253,7 +244,11 @@ jobs:
 
   - name: etcd_z1
     release: (( meta.release.name ))
-    template: etcd
+    templates:
+      - name: etcd
+        release: (( meta.release.name ))
+      - name: etcd_metrics_server
+        release: (( meta.release.name ))
     instances: 1
     persistent_disk: 10024
     resource_pool: medium_z1
@@ -266,7 +261,11 @@ jobs:
 
   - name: etcd_z2
     release: (( meta.release.name ))
-    template: etcd
+    templates:
+      - name: etcd
+        release: (( meta.release.name ))
+      - name: etcd_metrics_server
+        release: (( meta.release.name ))
     instances: 1
     persistent_disk: 10024
     resource_pool: medium_z2
@@ -338,6 +337,7 @@ jobs:
       - name: cf1
         static_ips: (( merge ))
     properties:
+      etcd_ips: (( jobs.etcd_leader_z1.networks.cf1.static_ips jobs.etcd_z1.networks.cf1.static_ips jobs.etcd_z2.networks.cf2.static_ips ))
       networks: (( meta.networks.z1 ))
 
   - name: loggregator_z2
@@ -349,6 +349,7 @@ jobs:
       - name: cf2
         static_ips: (( merge ))
     properties:
+      etcd_ips: (( jobs.etcd_leader_z1.networks.cf1.static_ips jobs.etcd_z1.networks.cf1.static_ips jobs.etcd_z2.networks.cf2.static_ips ))
       networks: (( meta.networks.z2 ))
 
   - name: loggregator_trafficcontroller_z1
@@ -404,6 +405,8 @@ jobs:
         host: (( meta.loggregator_endpoint.z2.host ))
 
 properties:
+  support_address: (( merge || "http://support.cloudfoundry.com" ))
+  description: (( merge || "Cloud Foundry sponsored by Pivotal" ))
   domain: (( merge ))
   ssl:
     skip_cert_verify: (( merge || false ))
@@ -425,6 +428,12 @@ properties:
     debug: false
     trace: false
 
+  etcd_metrics_server:
+    nats:
+      machines: (( .properties.nats.machines ))
+      username: (( .properties.nats.user ))
+      password: (( .properties.nats.password ))
+
   dea_next:
     memory_mb: (( merge ))
     memory_overcommit_factor: 3
@@ -437,6 +446,7 @@ properties:
     kernel_network_tuning_enabled: true
     directory_server_protocol: https
     evacuation_bail_out_time_in_seconds: 600
+    logging_level: debug
 
   loggregator_endpoint:
     shared_secret: (( merge ))
