@@ -1,6 +1,6 @@
 set -e -x
 
-REPO_NAME=github.com/cloudfoundry/gorouter
+REPO_NAME=github.com/nimbus-cloud/gorouter
 
 REPO_DIR=${BOSH_INSTALL_TARGET}/src/${REPO_NAME}
 
