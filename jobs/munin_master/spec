@@ -1,0 +1,15 @@
+---
+name: munin_master
+packages:
+  - munin_master
+templates:
+  etc/munin/munin.conf.erb: etc/munin/munin-node.conf
+  etc/cron.d/munin: etc/cron.d/munin
+  etc/cron.d/munin-config-updater: etc/cron.d/munin-config-updater
+  bin/munin_master_ctl: bin/munin_master_ctl
+  bin/nginx_ctl.erb: bin/nginx_ctl
+  bin/update_munin_conf.py.erb: bin/update_munin_conf.py
+  config/nginx.conf.erb: config/nginx.conf
+properties:
+  dummy.property:
+    description: "true"

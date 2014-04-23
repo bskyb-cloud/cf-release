@@ -1,0 +1,8 @@
+---
+name: munin_node_base
+packages:
+  - munin_node_base
+templates:
+  etc/munin/munin-node.conf.erb: etc/munin/munin-node.conf
+  bin/munin_node_base_ctl: bin/munin_node_base_ctl
+properties: {}

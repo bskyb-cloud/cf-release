@@ -1,0 +1,162 @@
+#!/bin/bash
+#
+
+set -e
+
+NAME="munin-node"
+DESC="munin node"
+USER=munin
+
+PID_FILE=/var/run/munin/munin-node.pid
+INIT_LOG_DIR=/var/log/munin
+
+TIMESTAMP=$(which date)
+
+RETVAL=0
+
+ensure_dir() {
+
+DIR=$1
+  if [ ! -d "${DIR}" ] ; then
+    mkdir -p "${DIR}"
+    chown -R "${USER}":"${USER}" "${DIR}"
+    chmod 755 "${DIR}"
+  fi
+}
+
+ensure_dirs() {
+  ensure_dir "$(dirname "${PID_FILE}")"
+  ensure_dir "${INIT_LOG_DIR}"
+}
+
+remove_pid() {
+  rm -f "${PID_FILE}"
+  rmdir "$(dirname "${PID_FILE}")" || :
+}
+
+force_link_plugin() {
+  LINK_FROM_NAME=$1
+  LINK_TO_NAME=$1
+  ln -sf /usr/share/munin/plugins/$LINK_FROM_NAME /etc/munin/plugins/$LINK_TO_NAME
+}
+
+start_munin_node() {
+  cp /var/vcap/jobs/munin_node_base/etc/munin/munin-node.conf /etc/munin/munin-node.conf
+  status_munin_node
+  if [ "${RETVAL}" = 0 ]; then
+    echo "munin-node is currently running"
+  else
+    RETVAL=0
+    ensure_dirs
+    echo "$("${TIMESTAMP}"): Starting munin-node" >> "${INIT_LOG_DIR}/startup_stdout.log"
+    set +e
+
+    # ensure that all of the plugins are enabled and ready to run...
+    PLUGINS=( "cpu" "cpuspeed" "df" "df_inode" "diskstats" "entropy" "forks" "interrupts" "irqstats" "load" "lpstat" "memory" "open_files" "open_inodes" "processes" "proc_pri" "swap" "threads" "uptime" "users" "vmstat" )
+    for i in "${PLUGINS[@]}"
+    do
+        force_link_plugin $i $i
+    done
+
+    # now for the ethernet ports
+    /sbin/ifconfig -s -a | grep eth | cut -d " " -f 1 | while read i
+    do
+        force_link_plugin if_err_ if_err_$i
+        force_link_plugin if_ if_$i
+    done
+
+
+    service munin-node start \
+      1>> "${INIT_LOG_DIR}/startup_stdout.log" \
+      2>> "${INIT_LOG_DIR}/startup_stderr.log" \
+      0<&-
+    RETVAL=$?
+    set -e
+    case "${RETVAL}" in
+      0)
+        echo "$("${TIMESTAMP}"): Finished starting munin-node" >> "${INIT_LOG_DIR}/startup_stdout.log"
+        echo "SUCCESS"
+        ;;
+      1)
+        echo "$("${TIMESTAMP}"): Already started munin-node" >> "${INIT_LOG_DIR}/startup_stdout.log"
+        echo "SUCCESS"
+        RETVAL=0
+        ;;
+      *)
+        echo "$("${TIMESTAMP}"): Errored starting munin-node" >> "${INIT_LOG_DIR}/startup_stdout.log"
+        echo "$("${TIMESTAMP}"): Errored starting munin-node" >> "${INIT_LOG_DIR}/startup_stderr.log"
+        remove_pid
+        echo "FAILED - check ${INIT_LOG_DIR}/startup_std*.log"
+        RETVAL=1
+        ;;
+    esac
+  fi
+}
+
+stop_munin_node() {
+  status_munin_node
+  if [ "${RETVAL}" = 0 ]; then
+    set +e
+    for pid in $(cat "${PID_FILE}"); do
+      kill ${pid} || RETVAL=$?
+    done
+    set -e
+    if [ "${RETVAL}" = 0 ]; then
+      remove_pid
+    else
+      echo "FAILED - check logs"
+    fi
+  else
+    echo "munin-node not running"
+  fi
+}
+
+# RETVAL = 0 if running, != 0 if stopped
+status_munin_node() {
+  if [ -f "${PID_FILE}" ]; then
+    RETVAL=0
+    set +e
+    for pid in $(cat "${PID_FILE}"); do
+      kill -0 "${pid}" > /dev/null 2>&1 || RETVAL=3
+    done
+    kill -0 $(cat "${PID_FILE}") > /dev/null 2>&1
+    if [ $? != 0 ]; then
+      RETVAL=3
+    fi
+    set -e
+  else
+    RETVAL=1
+  fi
+}
+
+restart_munin_node() {
+  stop_munin_node
+  start_munin_node
+}
+
+case "$1" in
+  start)
+    echo -n "Starting ${DESC}: "
+    start_munin_node
+    echo "${NAME}."
+    ;;
+  stop)
+    echo -n "Stopping ${DESC}: "
+    stop_munin_node
+    echo "${NAME}."
+    ;;
+  status)
+    status_munin_node
+    ;;
+  force-reload|reload|restart)
+    echo -n "Restarting ${DESC}: "
+    restart_munin_node
+    echo "${NAME}."
+    ;;
+  *)
+    echo "Usage: $0 {start|stop|restart|reload|force-reload}" >&2
+    RETVAL=1
+    ;;
+esac
+
+exit "${RETVAL}"

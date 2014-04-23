@@ -1,0 +1,6 @@
+check process munin_node_base
+  with pidfile /var/run/munin/munin-node.pid
+  start program "/var/vcap/jobs/munin_node_base/bin/munin_node_base_ctl start"
+  stop program "/var/vcap/jobs/munin_node_base/bin/munin_node_base_ctl stop"
+  group vcap
+

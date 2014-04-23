@@ -1,0 +1,6 @@
+---
+name: munin_node_haproxy
+# bosh insists on haveing some sort of file - this was chosen as a dummy file 
+# as it _should_ exist and be relatively small
+files:
+  - munin_node_base/dummy

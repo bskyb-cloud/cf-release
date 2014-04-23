@@ -1,0 +1,39 @@
+#!/bin/bash
+
+set -e # exit immediately if a simple command exits with a non-zero status
+start_munin() {
+    cp /var/vcap/jobs/munin_master/etc/cron.d/munin /etc/cron.d/munin
+    cp /var/vcap/jobs/munin_master/etc/munin/munin.conf /etc/munin/munin.conf
+    chmod a+rwx /tmp
+
+    service munin-node start \
+      1>> "${INIT_LOG_DIR}/startup_stdout.log" \
+      2>> "${INIT_LOG_DIR}/startup_stderr.log" \
+      0<&-
+}
+
+stop_munin() {
+    service munin-node stop \
+      1>> "${INIT_LOG_DIR}/startup_stdout.log" \
+      2>> "${INIT_LOG_DIR}/startup_stderr.log" \
+      0<&-
+}
+case $1 in
+
+  start)
+    start_munin
+    ;;
+  stop)
+    stop_munin
+    ;;
+  force-reload|reload|restart)
+    start_munin
+    stop_munin
+    ;;
+  *)
+    echo "Usage: $0 {start|stop|restart|reload|force-reload}" >&2
+    exit 1
+    ;;
+esac
+
+exit 0

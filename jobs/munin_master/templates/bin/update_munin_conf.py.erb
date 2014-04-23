@@ -1,0 +1,78 @@
+#!/usr/bin/python
+
+import sys, os, string, urllib2, json, base64, socket, urllib, httplib, subprocess, os, time
+from urllib2 import HTTPError
+
+API_IP_ADDRESS="<%= properties.bosh_target_endpoint %>"
+API_USERNAME="<%= properties.bosh_username %>"
+API_PASSWORD="<%= properties.bosh_password %>"
+
+class SmartRedirectHandler(urllib2.HTTPRedirectHandler):
+	# for a long running job - cloudfoundry will put the task on the queue and 
+	# then wait for all of the updates to come back - they send this through 
+	# with a redirect - we need to find the location header and then poll that one
+	def http_error_302(self, req, fp, code, msg, headers):
+		for header in headers:
+			if header == "location":
+				return(headers[header])
+		return None
+
+
+def create_request(URL, parameters):
+	params = urllib.urlencode(parameters)
+	request = urllib2.Request(API_IP_ADDRESS + URL + params)
+	base64string = base64.encodestring('%s:%s' % (API_USERNAME, API_PASSWORD)).replace('\n', '')
+	request.add_header("Authorization", "Basic %s" % base64string)
+	opener = urllib2.build_opener(SmartRedirectHandler())
+	return(opener.open(request))
+
+def generate_config():
+	# this will return a redirect URL - which we need to do some munging on
+	opener_response = create_request("/deployments/cf/vms?", dict({'format': 'full'}))
+	if(None == opener_response):
+		sys.exit()
+	tasks_index = opener_response.find("/tasks/")
+	redirect_task_url = (opener_response[tasks_index:] + "/output?")
+
+	# now iterate through the results until we get a 200 - or we have done it 'n' times
+	n = 100
+
+	response_code = 204
+
+	while(response_code == 204):
+		opener_response = create_request(redirect_task_url, dict({'type': 'result'}))
+		response_code = opener_response.getcode()
+		n = n - 1
+		if(n == 0):
+			break
+
+	# at this point we should either have timed out, or we have the correct 
+	# response code of 200
+	SERVER_IPS = {}
+	if(response_code == 200):
+		time.sleep(2)
+		command = "/usr/bin/curl -s -k -u " + API_USERNAME + ":" + API_PASSWORD + " " + API_IP_ADDRESS + redirect_task_url + "type=result"
+
+		output = os.popen(command).readlines()
+		for line in output:
+			json_contents = json.loads(line)
+			SERVER_IPS[json_contents.get("job_name")] = json_contents.get("ips")[0]
+
+		sorted_keys = SERVER_IPS.keys()
+		sorted_keys.sort()
+
+		# now write out the configuration
+		#outfile = open("/etc/munin/munin.conf", 'w')
+		outfile = open("/etc/munin/munin.conf", 'w')
+		outfile.write("includedir /etc/munin/munin-conf.d\n")
+
+		for key in sorted_keys:
+			outfile.write("[cloudfoundry;" + key.replace("_", "-") + "]\n")
+			outfile.write("    address " + SERVER_IPS[key] + "\n")
+			outfile.write("    use_node_name yes\n\n")
+
+
+if __name__ == "__main__":
+	# here we are going to write out the munin copnfiguration - if we can generate it...
+	generate_config()
+

@@ -59,3 +59,20 @@ backend tcp-routers
     <% p("router.servers.z2").each_with_index do |ip, index| %>
         server node<%= index + size %> <%= ip %>:<%= p("router.port") %> check inter 1000
     <% end %>
+
+listen stats 127.0.0.1:8000
+    mode http
+    log global
+
+    maxconn 10
+
+    clitimeout 100s
+    srvtimeout 100s
+    contimeout 100s
+    timeout queue 100s
+
+    stats enable
+    stats hide-version
+    stats refresh 30s
+    stats show-node
+    stats uri  /haproxyadmin
