@@ -1,9 +1,12 @@
 #!/bin/bash
 
-set -e # exit immediately if a simple command exits with a non-zero status
+# exit immediately if a simple command exits with a non-zero status
+set -e 
+
 start_munin() {
+    /var/vcap/jobs/munin_master/update_munin_conf.py
     cp /var/vcap/jobs/munin_master/etc/cron.d/munin /etc/cron.d/munin
-    cp /var/vcap/jobs/munin_master/etc/munin/munin.conf /etc/munin/munin.conf
+    cp /var/vcap/jobs/munin_master/etc/cron.d/munin-config-updater /etc/cron.d/munin-config-updater
     chmod a+rwx /tmp
 
     service munin-node start \
