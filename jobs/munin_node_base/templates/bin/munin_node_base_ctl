@@ -36,7 +36,7 @@ remove_pid() {
 
 force_link_plugin() {
   LINK_FROM_NAME=$1
-  LINK_TO_NAME=$1
+  LINK_TO_NAME=$2
   ln -sf /usr/share/munin/plugins/$LINK_FROM_NAME /etc/munin/plugins/$LINK_TO_NAME
 }
 
