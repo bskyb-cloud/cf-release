@@ -4,7 +4,7 @@
 set -e 
 
 start_munin() {
-    /var/vcap/jobs/munin_master/update_munin_conf.py
+    /var/vcap/jobs/munin_master/bin/update_munin_conf.py
     cp /var/vcap/jobs/munin_master/etc/cron.d/munin /etc/cron.d/munin
     cp /var/vcap/jobs/munin_master/etc/cron.d/munin-config-updater /etc/cron.d/munin-config-updater
     chmod a+rwx /tmp
