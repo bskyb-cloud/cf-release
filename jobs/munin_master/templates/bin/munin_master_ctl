@@ -3,11 +3,23 @@
 # exit immediately if a simple command exits with a non-zero status
 set -e 
 
+force_link_plugin() {
+  LINK_FROM_NAME=$1
+  LINK_TO_NAME=$2
+  ln -sf /usr/share/munin/plugins/$LINK_FROM_NAME /etc/munin/plugins/$LINK_TO_NAME
+}
+
 start_munin() {
     /var/vcap/jobs/munin_master/bin/update_munin_conf.py
     cp /var/vcap/jobs/munin_master/etc/cron.d/munin /etc/cron.d/munin
     cp /var/vcap/jobs/munin_master/etc/cron.d/munin-config-updater /etc/cron.d/munin-config-updater
     chmod a+rwx /tmp
+
+    PLUGINS=( "munin_stats" "munin_update" "nginx_request" "nginx_status")
+    for i in "${PLUGINS[@]}"
+    do
+        force_link_plugin $i $i
+    done
 
     /etc/init.d/munin-node start \
       1>> "${INIT_LOG_DIR}/munin_master_startup_stdout.log" \
