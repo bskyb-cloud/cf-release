@@ -1,0 +1,14 @@
+---
+name: nginx
+templates:
+  nginx_ctl.erb: bin/nginx_ctl
+  nginx.conf.erb: config/nginx.conf
+
+packages:
+  - nginx
+
+properties:
+  dummy.property:
+    description: "true"
+
+
