@@ -1,17 +1,18 @@
 ---
 name: munin_master
 packages:
-  - common
   - munin_master
 templates:
   etc/munin/munin.conf.erb: etc/munin/munin-node.conf
   etc/cron.d/munin: etc/cron.d/munin
   etc/cron.d/munin-config-updater: etc/cron.d/munin-config-updater
   bin/munin_master_ctl: bin/munin_master_ctl
-  bin/nginx_ctl.erb: bin/nginx_ctl
   bin/update_munin_conf.py.erb: bin/update_munin_conf.py
-  config/nginx.conf.erb: config/nginx.conf
   etc/munin/plugin-conf.d/munin: etc/munin/plugin-conf.d/munin
 properties:
-  dummy.property:
-    description: "true"
+  bosh_target_endpoint: 
+    description: "this is just for you bosh"
+  bosh_username:
+    description: "this is just for you bosh"
+  bosh_password:
+    description: "this is just for you bosh"

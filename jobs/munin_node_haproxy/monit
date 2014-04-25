@@ -1,6 +1,0 @@
-check process munin_node_haproxy
-  with pidfile /var/run/munin/munin-node.pid
-  start program "/var/vcap/jobs/munin_node_haproxy/bin/munin_node_haproxy_ctl start"
-  stop program "/var/vcap/jobs/munin_node_haproxy/bin/munin_node_haproxy_ctl stop"
-  group vcap
-

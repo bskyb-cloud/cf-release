@@ -21,10 +21,11 @@ force_link_plugin() {
 }
 
 start_munin_node() {
+  # default installation for all installs
   cp /var/vcap/jobs/munin_node_base/etc/munin/munin-node.conf /etc/munin/munin-node.conf
 
   # ensure that all of the plugins are enabled and ready to run...
-  PLUGINS=( "cpu" "cpuspeed" "df" "df_inode" "diskstats" "entropy" "forks" "interrupts" "irqstats" "load" "lpstat" "memory" "open_files" "open_inodes" "processes" "proc_pri" "swap" "threads" "uptime" "users" "vmstat" )
+  PLUGINS=( "cpu" "df" "df_inode" "diskstats" "entropy" "forks" "interrupts" "irqstats" "load" "lpstat" "memory" "open_files" "open_inodes" "processes" "proc_pri" "swap" "threads" "uptime" "users" "vmstat" )
   for i in "${PLUGINS[@]}"
   do
       force_link_plugin $i $i
@@ -37,36 +38,32 @@ start_munin_node() {
       force_link_plugin if_ if_$i
   done
 
+  ############################################################################
+  #
+  #  MUNIN HA PROXY CONFIGURATION
+  #
+  ############################################################################
+  if [ -d /var/vcap/jobs/haproxy ] 
+  then
+    cp /var/vcap/jobs/munin_node_haproxy/etc/munin/plugin-conf.d/haproxy /etc/munin/plugin-conf.d/haproxy
+    cp /var/vcap/jobs/munin_node_haproxy/usr/share/munin/plugins/* /usr/share/munin/plugins/
+    chmod a+rx /usr/share/munin/plugins/*
+    # go through and link in all of the munin haproxy plugins
+    ls /usr/share/munin/plugins/haproxy* | while read i ; do ln -sf $i /etc/munin/plugins/`basename $i`; done
+  fi
 
-  /etc/init.d/munin-node start \
+
+  /usr/sbin/service munin-node start \
     1>> "${INIT_LOG_DIR}/munin_node_startup_stdout.log" \
     2>> "${INIT_LOG_DIR}/munin_node_startup_stderr.log" \
     0<&-
 }
 
 stop_munin_node() {
-    /etc/init.d/munin-node stop \
+    /usr/sbin/service munin-node stop \
       1>> "${INIT_LOG_DIR}/munin_node_startup_stdout.log" \
       2>> "${INIT_LOG_DIR}/munin_node_startup_stderr.log" \
       0<&-
-}
-
-# RETVAL = 0 if running, != 0 if stopped
-status_munin_node() {
-  if [ -f "${PID_FILE}" ]; then
-    RETVAL=0
-    set +e
-    for pid in $(cat "${PID_FILE}"); do
-      kill -0 "${pid}" > /dev/null 2>&1 || RETVAL=3
-    done
-    kill -0 $(cat "${PID_FILE}") > /dev/null 2>&1
-    if [ $? != 0 ]; then
-      RETVAL=3
-    fi
-    set -e
-  else
-    RETVAL=1
-  fi
 }
 
 restart_munin_node() {

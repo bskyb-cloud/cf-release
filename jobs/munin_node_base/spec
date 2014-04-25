@@ -3,6 +3,34 @@ name: munin_node_base
 packages:
   - munin_node_base
 templates:
-  etc/munin/munin-node.conf.erb: etc/munin/munin-node.conf
   bin/munin_node_base_ctl: bin/munin_node_base_ctl
+
+  etc/munin/plugin-conf.d/haproxy: etc/munin/plugin-conf.d/haproxy
+
+  etc/munin/munin-node.conf.erb: etc/munin/munin-node.conf
+
+  usr/share/munin/plugins/haproxy_abort_backend: usr/share/munin/plugins/haproxy_abort_backend
+  usr/share/munin/plugins/haproxy_active_backend: usr/share/munin/plugins/haproxy_active_backend
+  usr/share/munin/plugins/haproxy_bytes_backend: usr/share/munin/plugins/haproxy_bytes_backend
+  usr/share/munin/plugins/haproxy_bytes_compressor_backend: usr/share/munin/plugins/haproxy_bytes_compressor_backend
+  usr/share/munin/plugins/haproxy_bytes_compressor_frontend: usr/share/munin/plugins/haproxy_bytes_compressor_frontend
+  usr/share/munin/plugins/haproxy_bytes_frontend: usr/share/munin/plugins/haproxy_bytes_frontend
+  usr/share/munin/plugins/haproxy_denied_backend: usr/share/munin/plugins/haproxy_denied_backend
+  usr/share/munin/plugins/haproxy_denied_frontend: usr/share/munin/plugins/haproxy_denied_frontend
+  usr/share/munin/plugins/haproxy_errors_backend: usr/share/munin/plugins/haproxy_errors_backend
+  usr/share/munin/plugins/haproxy_errors_frontend: usr/share/munin/plugins/haproxy_errors_frontend
+  usr/share/munin/plugins/haproxy_queue_backend: usr/share/munin/plugins/haproxy_queue_backend
+  usr/share/munin/plugins/haproxy_rate_backend: usr/share/munin/plugins/haproxy_rate_backend
+  usr/share/munin/plugins/haproxy_rate_frontend: usr/share/munin/plugins/haproxy_rate_frontend
+  usr/share/munin/plugins/haproxy_reqrate_frontend: usr/share/munin/plugins/haproxy_reqrate_frontend
+  usr/share/munin/plugins/haproxy_response_compressor_backend: usr/share/munin/plugins/haproxy_response_compressor_backend
+  usr/share/munin/plugins/haproxy_response_compressor_frontend: usr/share/munin/plugins/haproxy_response_compressor_frontend
+  usr/share/munin/plugins/haproxy_responses_backend: usr/share/munin/plugins/haproxy_responses_backend
+  usr/share/munin/plugins/haproxy_responses_frontend: usr/share/munin/plugins/haproxy_responses_frontend
+  usr/share/munin/plugins/haproxy_sessions_backend: usr/share/munin/plugins/haproxy_sessions_backend
+  usr/share/munin/plugins/haproxy_sessions_frontend: usr/share/munin/plugins/haproxy_sessions_frontend
+  usr/share/munin/plugins/haproxy_sessions_total_backend: usr/share/munin/plugins/haproxy_sessions_total_backend
+  usr/share/munin/plugins/haproxy_sessions_total_frontend: usr/share/munin/plugins/haproxy_sessions_total_frontend
+  usr/share/munin/plugins/haproxy_warnings_backend: usr/share/munin/plugins/haproxy_warnings_backend
+
 properties: {}
