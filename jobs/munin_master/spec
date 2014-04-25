@@ -1,6 +1,7 @@
 ---
 name: munin_master
 packages:
+  - common
   - munin_master
 templates:
   etc/munin/munin.conf.erb: etc/munin/munin-node.conf
@@ -10,6 +11,7 @@ templates:
   bin/nginx_ctl.erb: bin/nginx_ctl
   bin/update_munin_conf.py.erb: bin/update_munin_conf.py
   config/nginx.conf.erb: config/nginx.conf
+  etc/munin/plugin-conf.d/munin: etc/munin/plugin-conf.d/munin
 properties:
   dummy.property:
     description: "true"

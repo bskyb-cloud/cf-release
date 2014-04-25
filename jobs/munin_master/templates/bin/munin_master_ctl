@@ -13,6 +13,7 @@ start_munin() {
     /var/vcap/jobs/munin_master/bin/update_munin_conf.py
     cp /var/vcap/jobs/munin_master/etc/cron.d/munin /etc/cron.d/munin
     cp /var/vcap/jobs/munin_master/etc/cron.d/munin-config-updater /etc/cron.d/munin-config-updater
+    cp /var/vcap/jobs/munin_master/etc/munin/plugin-conf.d/munin /etc/munin/plugin-conf.d/munin
     chmod a+rwx /tmp
 
     PLUGINS=( "munin_stats" "munin_update" "nginx_request" "nginx_status")
