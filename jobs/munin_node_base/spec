@@ -33,4 +33,6 @@ templates:
   usr/share/munin/plugins/haproxy_sessions_total_frontend: usr/share/munin/plugins/haproxy_sessions_total_frontend
   usr/share/munin/plugins/haproxy_warnings_backend: usr/share/munin/plugins/haproxy_warnings_backend
 
-properties: {}
+properties: 
+  dummy:
+    "true"

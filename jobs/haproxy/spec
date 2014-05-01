@@ -4,7 +4,6 @@ packages:
 - haproxy
 - syslog_aggregator
 - munin_node_base
-- munin_node_haproxy
 
 templates:
   syslog_forwarder.conf.erb: config/syslog_forwarder.conf

@@ -3,7 +3,8 @@ name: munin_master
 packages:
   - munin_master
 templates:
-  etc/munin/munin.conf.erb: etc/munin/munin-node.conf
+  etc/munin/munin.conf.erb: etc/munin/munin.conf
+  etc/munin/munin-node.conf.erb: etc/munin/munin-node.conf
   etc/cron.d/munin: etc/cron.d/munin
   etc/cron.d/munin-config-updater: etc/cron.d/munin-config-updater
   bin/munin_master_ctl: bin/munin_master_ctl

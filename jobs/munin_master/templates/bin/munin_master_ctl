@@ -1,5 +1,8 @@
 #!/bin/bash
 
+PID_FILE="/var/run/munin/munin-node.pid"
+INIT_LOG_DIR="/var/log/munin"
+
 # exit immediately if a simple command exits with a non-zero status
 set -e 
 
@@ -10,14 +13,20 @@ force_link_plugin() {
 }
 
 start_munin() {
+  # this will create the /etc/munin/munin.conf file
   /var/vcap/jobs/munin_master/bin/update_munin_conf.py
+
+  cp /var/vcap/jobs/munin_master/etc/munin/munin-node.conf /etc/munin/munin-node.conf
+
+  cp /var/vcap/jobs/munin_master/etc/munin/plugin-conf.d/munin /etc/munin/plugin-conf.d/munin
+
   cp /var/vcap/jobs/munin_master/etc/cron.d/munin /etc/cron.d/munin
   cp /var/vcap/jobs/munin_master/etc/cron.d/munin-config-updater /etc/cron.d/munin-config-updater
-  cp /var/vcap/jobs/munin_master/etc/munin/plugin-conf.d/munin /etc/munin/plugin-conf.d/munin
+
   chmod a+rwx /tmp
 
   # default installation for all installs
-  cp /var/vcap/jobs/munin_node_base/etc/munin/munin-node.conf /etc/munin/munin-node.conf
+  cp /var/vcap/jobs/munin_master/etc/munin/munin-node.conf /etc/munin/munin-node.conf
 
   # ensure that all of the plugins are enabled and ready to run...
   PLUGINS=( "cpu" "df" "df_inode" "diskstats" "entropy" "forks" "interrupts" "irqstats" "load" "lpstat" "memory" "open_files" "open_inodes" "processes" "proc_pri" "swap" "threads" "uptime" "users" "vmstat" )
@@ -27,7 +36,7 @@ start_munin() {
       force_link_plugin $i $i
   done
 
-  # now for the ethernet ports
+  # now for the ethernet ports 
   /sbin/ifconfig -s -a | grep eth | cut -d " " -f 1 | while read i
   do
       force_link_plugin if_err_ if_err_$i
@@ -40,34 +49,43 @@ start_munin() {
       force_link_plugin $i $i
   done
 
-  /usr/sbin/service munin-node start \
-    1>> "${INIT_LOG_DIR}/munin_master_startup_stdout.log" \
-    2>> "${INIT_LOG_DIR}/munin_master_startup_stderr.log" \
-    0<&-
+  rm -f $PID_FILE
+  if [ `ps -ef | grep munin-node | grep -v grep | wc -l` = 1 ]
+  then
+    killall munin-node
+  fi
+  /usr/sbin/munin-node
+  exit 0
 }
 
 stop_munin() {
-    /usr/sbin/service munin-node stop \
-      1>> "${INIT_LOG_DIR}/munin_master_startup_stdout.log" \
-      2>> "${INIT_LOG_DIR}/munin_master_startup_stderr.log" \
-      0<&-
+  if [ `ps -ef | grep munin-node | grep -v grep | wc -l` = 1 ]
+  then
+    killall munin-node
+  fi
+  exit 0
 }
-case $1 in
 
+case "$1" in
   start)
+    echo -n "Starting ${DESC}: "
     start_munin
+    echo "${NAME}."
     ;;
   stop)
+    echo -n "Stopping ${DESC}: "
     stop_munin
+    echo "${NAME}."
     ;;
   force-reload|reload|restart)
-    start_munin
+    echo -n "Restarting ${DESC}: "
     stop_munin
+    start_munin
+    echo "${NAME}."
     ;;
   *)
     echo "Usage: $0 {start|stop|restart|reload|force-reload}" >&2
     exit 1
     ;;
 esac
-
 exit 0
