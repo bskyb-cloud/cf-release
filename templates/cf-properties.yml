@@ -46,7 +46,7 @@ properties:
     diego: false
     default_app_memory: 1024
     maximum_app_disk_in_mb: 2048
-    client_max_body_size: 256M
+    client_max_body_size: 1536M
 
     srv_api_uri: (( "https://api." domain ))
 
@@ -72,6 +72,7 @@ properties:
       app_package_directory_key: (( domain "-cc-packages" ))
       fog_connection: ~
       cdn: ~
+      max_package_size: 1073741824
 
     droplets:
       droplet_directory_key: (( domain "-cc-droplets" ))
@@ -106,20 +107,33 @@ properties:
         package: buildpack_ruby
       - name: nodejs_buildpack
         package: buildpack_nodejs
+      - name: go_buildpack
+        package: buildpack_go
 
     install_buildpacks: (( system_buildpacks user_buildpacks ))
 
   login:
+    analytics:
+      code: ~
+      domain: ~
     url: ~
     catalina_opts: (( merge ))
     uaa_certificate: ~
     protocol: https
     brand: oss
 
+    smtp:
+      host: ~
+      port: ~
+      user: ~
+      password: ~
+
     links:
       home: (( "https://console." domain ))
       passwd: (( "https://console." domain "/password_resets/new" ))
       signup: (( "https://console." domain "/register" ))
+      network: (( "https://network." domain ))
+      signup-network: (( "https://network." domain "/registrations/new" ))
 
   uaa:
     catalina_opts: (( merge ))
@@ -147,7 +161,6 @@ properties:
       password: (( merge ))
     
     login:
-      addnew: false
       client_secret: ~
       
     clients:

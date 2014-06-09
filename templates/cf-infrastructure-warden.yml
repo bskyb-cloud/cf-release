@@ -6,7 +6,7 @@ meta:
     local_root: /var/vcap/store
 
   stemcell:
-    name: bosh-warden-boshlite-ubuntu
+    name: bosh-warden-boshlite-ubuntu-lucid-go_agent
     version: latest
 
 update:
@@ -94,8 +94,8 @@ properties:
         redirect-uri: (( "http://login." domain ))
       cc_service_broker_client:
         secret: cc-broker-secret
-        scope: cloud_controller.write,openid,cloud_controller.read
-        authorities: clients.read,clients.write
+        scope: cloud_controller.write,openid,cloud_controller.read,cloud_controller_service_permissions.read
+        authorities: clients.read,clients.write,clients.admin
         authorized-grant-types: client_credentials
       developer_console:
         secret: console-secret
@@ -166,6 +166,22 @@ properties:
         name: uaadb
         citext: true
 
+  acceptance_tests:
+    api:  (( "api." domain ))
+    apps_domain: (( domain ))
+    admin_user: admin
+    admin_password: admin
+    skip_ssl_validation: true
+
+  smoke_tests:
+    api:  (( "api." domain ))
+    apps_domain: (( domain ))
+    user: admin
+    password: admin
+    org: SMOKE_TEST_ORG
+    space: SMOKE_TEST_SPACE
+    skip_ssl_validation: true
+
 jobs:
   # specify nats static IP
   - name: nats_z1
@@ -210,17 +226,11 @@ jobs:
   - name: hm9000_z2
     instances: 0
 
-  - name: etcd_leader_z1
+  - name: etcd_z1
     instances: 1
     networks:
       - name: cf1
-        static_ips: (( static_ips(9) ))
-
-  - name: etcd_z1
-    instances: 0
-    networks:
-      - name: cf1
-        static_ips: (( static_ips(10) ))
+        static_ips: (( static_ips(10, 11) ))
 
   - name: etcd_z2
     instances: 0
@@ -239,6 +249,11 @@ jobs:
     networks:
       - name: cf2
         static_ips: (( static_ips(5) ))
+
+  - name: login_z2
+    instances: 0
+    networks:
+      - name: cf2
 
   # only need one runner
   #
@@ -341,6 +356,12 @@ jobs:
           iDIeQCWd3/twqdDTR7FaDE7Q0i559u7A1yLumUn8caLF
           -----END RSA PRIVATE KEY-----
 
+  - name: acceptance_tests
+    instances: 1
+
+  - name: smoke_tests
+    instances: 1
+
 compilation:
   cloud_properties:
     name: random
@@ -384,6 +405,10 @@ resource_pools:
       name: random
 
   - name: router_z2
+    cloud_properties:
+      name: random
+
+  - name: small_errand
     cloud_properties:
       name: random
 

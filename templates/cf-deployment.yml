@@ -13,7 +13,9 @@ name: (( meta.environment ))
 
 director_uuid: (( merge ))
 
-releases: (( merge ))
+releases:
+  - name: cf
+    version: latest
 
 networks: (( merge ))
 
@@ -94,3 +96,9 @@ resource_pools:
     size: (( auto ))
     stemcell: (( meta.stemcell ))
     cloud_properties: (( merge ))
+
+  - name: small_errand
+    network: cf1
+    size: (( auto ))
+    stemcell: (( meta.stemcell ))
+    cloud_properties: (( merge || resource_pools.small_z1.cloud_properties ))
