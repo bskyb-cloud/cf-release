@@ -87,6 +87,8 @@ properties:
   dea_next.staging_cpu_limit_shares:
     description: "CPU limit in shares for staging tasks cgroup"
     default: 512
+  dea_next.http_proxy:
+    description: use this info for the http_proxy variable when staging
   dea_next.instance_memory_to_cpu_share_ratio:
     description: "Controls the relationship between app memory and cpu shares. app_cpu_shares = app_memory / cpu_share_factor"
     default: 8

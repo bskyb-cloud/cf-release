@@ -66,6 +66,9 @@ staging:
   disk_limit_mb: <%= p("dea_next.staging_disk_limit_mb") %>
   cpu_limit_shares: <%= p("dea_next.staging_cpu_limit_shares") %>
   disk_inode_limit: <%= p("dea_next.staging_disk_inode_limit") %>
+  <% if_p("dea_next.http_proxy") do %>
+  http_proxy: <%= p("dea_next.http_proxy") %>
+  <% end %>
   environment:
     BUILDPACK_CACHE: "/var/vcap/packages/buildpack_cache"
 
