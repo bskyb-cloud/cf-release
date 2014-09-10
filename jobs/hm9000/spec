@@ -39,10 +39,10 @@ properties:
     description:
   cc.srv_api_uri:
     description:
-  ccng.bulk_api_user:
+  cc.bulk_api_user:
     default: "bulk_api"
     description: "User used to access the bulk_api, health_manager uses it to connect to the cc, announced over NATS"
-  ccng.bulk_api_password:
+  cc.bulk_api_password:
     description: "Password used to access the bulk_api, health_manager uses it to connect to the cc, announced over NATS"
   etcd.machines:
     description: "IPs pointing to the ETCD cluster"
@@ -51,3 +51,10 @@ properties:
     default: false
   networks.apps:
     description: "HM9000 network information."
+
+  hm9000.desired_state_batch_size:
+    description: "The batch size when fetching desired state information from the CC."
+    default: 5000
+  hm9000.fetcher_network_timeout_in_seconds:
+    description: "Each API call to the CC must succeed within this timeout."
+    default: 30

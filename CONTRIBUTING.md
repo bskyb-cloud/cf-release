@@ -48,15 +48,19 @@ comment on pull requests.
 When the project receives a new CLA, it is recorded in the project records, the CLA is added to the database for the
 automated system uses, then we manually make the Pull Request as having a CLA on-file.
 
+## Proposing new Features
+Please see the [Proposing New Features](https://github.com/cloudfoundry-community/cf-docs-contrib/wiki/Proposing-New-Features) page on the Cloud Foundry community wiki that explains the process for getting the team's buy-in on your contribution before you start work.
+
 ## General Workflow
 
+1. [Collaborate with the team](https://github.com/cloudfoundry-community/cf-docs-contrib/wiki/Proposing-New-Features) before you start work
 1. Fork the repository
 1. Create a feature branch (`git checkout -b better_cf-release`)
 1. Build and deploy the
    [checked out version of](http://docs.cloudfoundry.com/docs/running/deploying-cf/common/cf-release.html) `cf-release`
 1. Make changes on your branch
 1. Re-deploy your version of `cf-release`
-1. [Run integration YETI tests](https://github.com/cloudfoundry/vcap-yeti)
+1. [Run Cloud Foundry Acceptance Tests (CATS)](https://github.com/cloudfoundry/cf-acceptance-tests)
 1. Push to your fork (`git push origin better_cf-release`) and
    [submit a pull request](https://help.github.com/articles/creating-a-pull-request)
    selecting `develop` as the target branch

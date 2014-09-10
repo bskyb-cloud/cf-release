@@ -6,7 +6,7 @@ meta:
     local_root: /var/vcap/store
 
   stemcell:
-    name: bosh-warden-boshlite-ubuntu-lucid-go_agent
+    name: bosh-warden-boshlite-ubuntu-trusty-go_agent
     version: latest
 
 update:
@@ -14,7 +14,7 @@ update:
   max_in_flight: 50
   canary_watch_time: 1000-180000
   update_watch_time: 1000-180000
-  serial: false
+  serial: true
 
 properties:
   ssl:
@@ -54,9 +54,10 @@ properties:
       fog_connection: (( meta.fog_config ))
     buildpacks:
       fog_connection: (( meta.fog_config ))
+    diego: (( merge || false ))
 
   uaa:
-    catalina_opts: -Xmx384m -XX:MaxPermSize=128m
+    catalina_opts: -Xmx192m -XX:MaxPermSize=128m
     jwt:
       signing_key: |
         -----BEGIN RSA PRIVATE KEY-----
@@ -92,9 +93,9 @@ properties:
       login:
         secret: login-secret
         redirect-uri: (( "http://login." domain ))
-      cc_service_broker_client:
+      cc-service-dashboards:
         secret: cc-broker-secret
-        scope: cloud_controller.write,openid,cloud_controller.read,cloud_controller_service_permissions.read
+        scope: openid,cloud_controller_service_permissions.read
         authorities: clients.read,clients.write,clients.admin
         authorized-grant-types: client_credentials
       developer_console:
@@ -107,13 +108,15 @@ properties:
         secret: servicesmgmt-secret
       space-mail:
         secret: space-mail-secret
+      notifications:
+        secret: notification-secret
     scim:
       users:
       - admin|admin|scim.write,scim.read,openid,cloud_controller.admin,clients.read,clients.write
     no_ssl: true
 
   login:
-    catalina_opts: -Xmx384m -XX:MaxPermSize=128m
+    catalina_opts: -Xmx96m -XX:MaxPermSize=64m
     protocol: http
 
   router:
@@ -172,6 +175,8 @@ properties:
     admin_user: admin
     admin_password: admin
     skip_ssl_validation: true
+    diego: (( properties.cc.diego ))
+    nodes: 1
 
   smoke_tests:
     api:  (( "api." domain ))
@@ -286,6 +291,7 @@ jobs:
       - name: cloud_controller_ng
       - name: cloud_controller_clock
       - name: cloud_controller_worker
+      - name: metron_agent
 
   - name: api_worker_z1
     instances: 0
@@ -359,6 +365,9 @@ jobs:
   - name: acceptance_tests
     instances: 1
 
+  - name: acceptance_tests_diego
+    instances: 1
+
   - name: smoke_tests
     instances: 1
 
@@ -412,7 +421,8 @@ resource_pools:
     cloud_properties:
       name: random
 
-networks:
+networks: (( merge || networks_default ))
+networks_default:
 - name: cf1
   subnets:
   - cloud_properties:

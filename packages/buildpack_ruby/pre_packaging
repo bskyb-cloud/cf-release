@@ -1,6 +1,0 @@
-set -e -x
-
-cd ${BUILD_DIR}/buildpacks/ruby
-#git --git-dir ${RELEASE_DIR}/src/buildpacks/ruby/.git describe --tags > gitinfo
-echo "2fc4ad8b6bdea30eb18fdd65207637f02da3e130" > gitinfo
-BUNDLE_WITHOUT=development:test bundle package --all

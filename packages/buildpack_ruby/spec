@@ -1,7 +1,5 @@
 ---
 name: buildpack_ruby
-dependencies:
+dependencies: 
 files:
-- buildpacks/ruby/Gemfile
-- buildpacks/ruby/Gemfile.lock
-- buildpacks/ruby/{bin,config,lib,resources,scripts,support,vendor}/**/*
+- ruby-buildpack/ruby_buildpack-offline-v1.0.1.zip

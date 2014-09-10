@@ -15,25 +15,25 @@ resource_pools:
   - name: small_z1
     cloud_properties:
       ram: 1024
-      disk: 2048
+      disk: 4096
       cpu: 1
 
   - name: small_z2
     cloud_properties:
       ram: 1024
-      disk: 2048
+      disk: 4096
       cpu: 1
 
   - name: medium_z1
     cloud_properties:
       ram: 1024
-      disk: 2048
+      disk: 4096
       cpu: 1
 
   - name: medium_z2
     cloud_properties:
       ram: 1024
-      disk: 2048
+      disk: 4096
       cpu: 1
 
   - name: large_z1
@@ -174,9 +174,13 @@ jobs:
 
   # using login template, that supports self-signed certs
   - name: login_z1
-    template: login
+    templates: 
+    - name: login
 
   - name: acceptance_tests
+    instances: 1
+
+  - name: acceptance_tests_diego
     instances: 1
 
   - name: smoke_tests

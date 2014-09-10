@@ -29,6 +29,16 @@ uaa:
 links: <% properties.login.links.marshal_dump.each do |id,url| %>
   <%= id %>: <%= url %><% end %>
 <% end %>
+<% if properties.login and properties.login.smtp then %>
+smtp: <% properties.login.smtp.marshal_dump.each do |key,val| %>
+  <%= key %>: <%= val %><% end %>
+<% end %>
+<% if properties.login and properties.login.tiles then %>
+tiles: <% properties.login.tiles.each do |tile| %>
+- <% tile.marshal_dump.each do |key,val| %><%= key %>: <%= val %>
+  <% end %>
+<% end %>
+<% end %>
 
 # The secret that this login server will use to authenticate to the uaa
 <% if !properties.uaa.clients || !properties.uaa.clients.login %>
@@ -41,6 +51,10 @@ require_https: <%= properties.uaa.require_https %>
 <% end %>
 <% if !properties.uaa.dump_requests.nil? %>
 dump_requests: <%= properties.uaa.dump_requests %>
+<% end %>
+
+<% if properties.login && properties.login.asset_base_url %>
+assetBaseUrl: <%= properties.login.asset_base_url %>
 <% end %>
 
 login:
@@ -70,9 +84,13 @@ login:
   <% if !properties.login.saml.serviceProviderKeyPassword.nil? %>
   serviceProviderKeyPassword: <%= properties.login.saml.serviceProviderKeyPassword %>
   <% end %>
+  <% if !properties.login.signups_enabled.nil? %>
+  signupsEnabled: <%= properties.login.signups_enabled %>
+  <% end %>
   saml:
     assertionConsumerIndex: <%= (properties.login && properties.login.saml.assertionConsumerIndex) ? properties.login.saml.assertionConsumerIndex : 1 %>
     nameID: <%= (properties.login && properties.login.saml.nameidFormat) ? properties.login.saml.nameidFormat : "urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress" %>
+    metadataTrustCheck: <%= (properties.login.saml.metadataTrustCheck) %>
 
 <% end %>
   authorize:
@@ -85,35 +103,14 @@ analytics:
   domain: <%= properties.login.analytics.domain %>
 <% end %>
 
-
 <% if properties.login && properties.login.spring_profiles %>
-spring_profiles: <%= properties.login.spring_profiles %>
-<% end %>
-
-<% if properties.login && properties.login.spring_profiles && properties.login.spring_profiles.include?('ldap') %>
-ldap:
-  profile:
-    file: <%= (properties.login.ldap.profile_type == 'simple-bind') ? 'ldap/ldap-simple-bind.xml' : (properties.login.ldap.profile_type == 'search-and-bind') ? 'ldap/ldap-search-and-bind.xml' : 'ldap/ldap-search-and-compare.xml' %>
-  base:
-    url: '<%= properties.login.ldap.url %>'
-    <% if properties.login.ldap.profile_type == 'simple-bind' %> 
-    userDnPattern: '<%= properties.login.ldap.userDNPattern %>'
-    <% else  %>
-    userDn: '<%= properties.login.ldap.userDN %>'
-    password: '<%= properties.login.ldap.userPassword %>'
-    searchBase: '<%= properties.login.ldap.searchBase %>' 
-    searchFilter: '<%= properties.login.ldap.searchFilter %>'
-    <% end %>
-    <% if properties.login.ldap.profile_type == 'search-and-compare' %> 
-    passwordAttributeName: <%= properties.login.ldap.passwordAttributeName %>
-    passwordEncoder: <%= properties.login.ldap.passwordEncoder %>
-    localPasswordCompare: <%= properties.login.ldap.localPasswordCompare %>
-    <% end %>
-  <% if properties.login.ldap.sslCertificate %>
-  ssl: 
-    sslCertificate: ! <%= "'" + p("login.ldap.sslCertificate").gsub("\n", "\n\n    ") + "'" %>
-    <% if properties.login.ldap.sslCertificateAlias %>
-    sslCertificateAlias: <%= properties.login.ldap.sslCertificateAlias %>
-    <% end %>
-  <% end %>  
+  <% if properties.login.spring_profiles.include?(',ldap') %>
+spring_profiles: <%= properties.login.spring_profiles.gsub! ',ldap', '' %>
+  <% elsif properties.login.spring_profiles.include?('ldap,') %>
+spring_profiles: <%= properties.login.spring_profiles.gsub! 'ldap,', '' %>
+  <% elsif properties.login.spring_profiles.eql?('ldap') %>
+#spring_profiles: <%= properties.login.spring_profiles.gsub! 'ldap,', '' %>
+  <% else %>
+spring_profiles: <%= properties.login.spring_profiles.gsub! 'ldap', '' %>  
+  <% end %>
 <% end %>

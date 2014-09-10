@@ -9,6 +9,7 @@ templates:
   nginx_ctl.erb: bin/nginx_ctl
   nginx.conf.erb: config/nginx.conf
   mime.types: config/mime.types
+  drain: bin/drain
 packages:
   - common
   - golang
@@ -59,12 +60,16 @@ properties:
   request_timeout_in_seconds:
     description: "Timeout in seconds for Router -> Endpoint roundtrip."
     default: 300
-  loggregator_endpoint.host:
-    description: "The host used to emit messages to the Loggregator."
-  loggregator_endpoint.port:
-    description: "The port used to emit messages to the Loggregator."
+  metron_endpoint.host:
+    description: "The host used to emit messages to the Metron agent."
+    default: "127.0.0.1"
+  metron_endpoint.dropsonde_port:
+    description: "The port used to emit dropsonde messages to the Metron agent."
+    default: 3457
+  metron_endpoint.port:
+    description: "The port used to emit legacy messages to the Metron agent."
     default: 3456
-  loggregator_endpoint.shared_secret:
+  metron_endpoint.shared_secret:
     description: "The key used to sign log messages."
   networks.apps:
     description: "GoRouter network information."
@@ -75,3 +80,6 @@ properties:
     description: "patterns used to identify non rfc-1918 ips"
     default: []
     
+  dropsonde.enabled:
+    default: false
+    description: "Enable the dropsonde emitter library"

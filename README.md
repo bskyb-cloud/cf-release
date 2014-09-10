@@ -10,7 +10,11 @@ Our documentation (currently a work in progress) is available here: [http://docs
 
 The [**develop**](https://github.com/cloudfoundry/cf-release/tree/develop) branch is where we do active development. Although we endeavor to keep the [**develop**](https://github.com/cloudfoundry/cf-release/tree/develop) branch stable, we do not guarantee that any given commit will deploy cleanly.
 
-If you want a stable branch, we recommend that you use the [**release-candidate**](https://github.com/cloudfoundry/cf-release/tree/release-candidate) branch.
+After passing all unit, integration, smoke, & acceptance tests, commits from the develop branch are merged to [**master**](https://github.com/cloudfoundry/cf-release/tree/master).
+
+At semi-regular intervals (usually twice a month) a [**release-candidate**](https://github.com/cloudfoundry/cf-release/tree/release-candidate) branch is made from master. The RC branch is used to test upgrading from the previous release. 
+
+If upgrading to the RC branch succeeds with smoke and acceptance test errands passing, then a new [**release**](https://github.com/cloudfoundry/cf-release/releases) is tagged.
 
 ## Repository Contents
 
@@ -46,7 +50,7 @@ The components in a V2 deployment are:
 
 | Component                                                                     | Description                                                                                                                                                         | Build Status                                                                                                                                                 |
 |-------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [Cloud Controller (ccng)](http://github.com/cloudfoundry/cloud_controller_ng) | The primary API entry point for Cloud Foundry.                                                                                                                      |<a href="https://travis-ci.org/cloudfoundry/cloud_controller_ng"><img src="https://travis-ci.org/cloudfoundry/cloud_controller_ng.png" alt="Build Status"></a>|
+| [Cloud Controller (cc)](http://github.com/cloudfoundry/cloud_controller_ng) | The primary API entry point for Cloud Foundry.                                                                                                                      |<a href="https://travis-ci.org/cloudfoundry/cloud_controller_ng"><img src="https://travis-ci.org/cloudfoundry/cloud_controller_ng.png" alt="Build Status"></a>|
 | [gorouter](https://github.com/cloudfoundry/gorouter)                          | The central router that manages traffic to applications deployed on Cloud Foundry.                                                                                  |<a href="https://travis-ci.org/cloudfoundry/gorouter"><img src="https://travis-ci.org/cloudfoundry/gorouter.png" alt="Build Status"></a>                      |
 | [DEA (dea_next)](https://github.com/cloudfoundry/dea_ng)                      | The droplet execution agent (DEA) performs two key activities in Cloud Foundry: staging and hosting applications.                                                   |<a href="https://travis-ci.org/cloudfoundry/dea_ng"><img src="https://travis-ci.org/cloudfoundry/dea_ng.png" alt="Build Status"></a>                          |
 | [Health Manager](https://github.com/cloudfoundry/hm9000)                      | The health manager monitors the state of the applications and ensures that started applications are indeed running, their versions and number of instances correct. |<a href="https://travis-ci.org/cloudfoundry/health_manager"><img src="https://travis-ci.org/cloudfoundry/health_manager.png" alt="Build Status"></a>          |
@@ -57,19 +61,15 @@ The components in a V2 deployment are:
 This is useful in the following situations:
   * After you've first cloned the repo
   * Before you make changes to the directory. (Running the script avoids having to rebase your changes on top of submodule updates.)
-* `./update_sub` takes as an argument the name of a submodule (partial matches okay) and pulls that submodule to master. The script then stages the changing of that submodule in cf-release.
-Typically, only people developing Cloud Foundry should use `update_sub`.
-This script is useful in the following situations:
-  * After you've made changes to a submodule if you need those changes made available for deployment
 * `./commit_with_shortlog` commits changes you've made using `update_sub`.
 
 ## Ask Questions
 
 Questions about the Cloud Foundry Open Source Project can be directed to our Google Groups.
 
-* BOSH Developers: [https://groups.google.com/a/cloudfoundry.org/group/bosh-dev/topics](https://groups.google.com/a/cloudfoundry.org/group/bosh-dev/topics)
+* Cloud Foundry (aka VCAP) Developers: [https://groups.google.com/a/cloudfoundry.org/group/vcap-dev/topics](https://groups.google.com/a/cloudfoundry.org/group/vcap-dev/topics)
 * BOSH Users:[https://groups.google.com/a/cloudfoundry.org/group/bosh-users/topics](https://groups.google.com/a/cloudfoundry.org/group/bosh-users/topics)
-* VCAP (Cloud Foundry) Developers: [https://groups.google.com/a/cloudfoundry.org/group/vcap-dev/topics](https://groups.google.com/a/cloudfoundry.org/group/vcap-dev/topics)
+* BOSH Developers: [https://groups.google.com/a/cloudfoundry.org/group/bosh-dev/topics](https://groups.google.com/a/cloudfoundry.org/group/bosh-dev/topics)
 
 ## File a bug
 
@@ -77,4 +77,5 @@ Bugs can be filed using GitHub Issues in the respective repository of each [Clou
 
 ## Contributions
 
-Please read the [contributors' guide](https://github.com/cloudfoundry/cf-release/blob/master/CONTRIBUTING.md)
+Please read the [contributors' guide](https://github.com/cloudfoundry/cf-release/blob/master/CONTRIBUTING.md) 
+

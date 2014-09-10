@@ -1,8 +1,4 @@
 ---
 name: buildpack_go
-dependencies:
 files:
-- buildpacks/go/Gemfile
-- buildpacks/go/Gemfile.lock
-- buildpacks/go/Rakefile
-- buildpacks/go/{bin,lib,vendor,linux-amd64}/**/*
+- go-buildpack/go_buildpack-offline-v1.0.1.zip

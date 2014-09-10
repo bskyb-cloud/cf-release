@@ -17,6 +17,7 @@ export PATH=${PWD}/Godeps/_workspace/bin:${PATH}
 export CF_COLOR=false
 export CONFIG=/var/vcap/jobs/acceptance-tests/bin/config.json
 
+mkdir -p /var/vcap/sys/log/acceptance_tests
 cd /var/vcap/packages/acceptance-tests/src/github.com/cloudfoundry/cf-acceptance-tests
 
 echo '################################################################################################################'
@@ -29,7 +30,16 @@ echo '##########################################################################
 echo "Running acceptance tests..."
 
 EXITSTATUS=0
-./bin/test -randomizeAllSpecs -nodes=<%= properties.acceptance_tests.nodes %> || EXITSTATUS=$?
+test_command=<%= properties.acceptance_tests.diego ? "bin/test_diego" : "bin/test" %>
+nodes=<%= properties.acceptance_tests.nodes %>
+skips=<%= properties.acceptance_tests.include_sso ? "" : "-skip=SSO" %>
+verbose=<%= properties.acceptance_tests.verbose ? "-v" : "" %>
+$test_command -randomizeAllSpecs $verbose -nodes=$nodes $skips -keepGoing || EXITSTATUS=$?
 
 echo "Acceptance Tests Complete; exit status: $EXITSTATUS"
+
+for i in /var/vcap/sys/log/acceptance_tests/*.txt; do
+  mv $i $i.log # needed to make download-logs work
+done
+
 exit $EXITSTATUS
