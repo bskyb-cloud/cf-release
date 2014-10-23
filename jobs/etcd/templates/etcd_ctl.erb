@@ -12,6 +12,9 @@ case $1 in
   start)
     pid_guard $PIDFILE "etcd"
 
+	# horrible hack to get around etcd being not so good
+	rm -rf /var/vcap/store/etcd
+
     mkdir -p $RUN_DIR
     mkdir -p $WORK_DIR
 
