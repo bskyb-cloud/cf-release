@@ -64,6 +64,9 @@ case "$1" in
     cp $JOB_DIR/config/{postgresql,pg_hba}.conf $DATA_DIR
     chown vcap:vcap $DATA_DIR/{postgresql,pg_hba}.conf
 
+    chmod +x $JOB_DIR/bin/postgres_backup
+    $JOB_DIR/bin/postgres_backup start
+
     echo "Starting PostgreSQL: "
     su - vcap -c "$PACKAGE_DIR/bin/pg_ctl -o \"-h $HOST -p $PORT\" \
                   -w start -D $DATA_DIR -l \"$DATA_DIR/pg_log/startup.log\""

@@ -4,6 +4,10 @@ templates:
   postgres_ctl.erb: bin/postgres_ctl
   postgresql.conf.erb: config/postgresql.conf
   pg_hba.conf.erb: config/pg_hba.conf
+  postgres_backup.cron.erb: config/postgres_backup.cron
+  postgres_backup.erb: bin/postgres_backup  
+  pg_backup.sh.erb: bin/pg_backup.sh
+  utils.sh: bin/utils.sh
 packages:
   - common
   - postgres
@@ -20,3 +24,17 @@ properties:
     description: "A list of database roles and associated properties to create"
   databases.max_connections:
     description: "Maximum number of database connections"
+  databases.backup.enable:
+    default: false
+  databases.backup.first_node_only:
+    default: false
+  databases.backup.cron_interval:
+    default: 0 7 * * *
+  databases.backup.retention_days:
+    default: 30
+  databases.backup.mount_point:
+    default: /var/vcap/services_backup
+  databases.backup.nfs_server.address:
+    description: NFS server address to use for backup
+  databases.backup.nfs_server.export_dir:
+    description: NFS server export dir for backups
