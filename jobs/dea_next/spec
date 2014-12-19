@@ -47,6 +47,8 @@ properties:
   dea_next.deny_networks:
     description:
     default: 0.0.0.0/0
+  dea_next.firewall_environment:
+    description: nb-config/backends-<env>.yml in app container
   dea_next.disk_mb:
     description:
     default: 32000
