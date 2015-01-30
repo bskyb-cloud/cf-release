@@ -5,6 +5,8 @@ worker_rlimit_nofile 30000;
 error_log /var/vcap/sys/log/nginx_gorouter/nginx.error.log;
 pid       /var/vcap/sys/run/nginx_gorouter/nginx.pid;
 
+syslog local6 <%= p("router.nginx_syslog_name") %>;
+
 events {
     worker_connections  19000;
     use epoll;
@@ -15,7 +17,7 @@ http {
     include       mime.types;
     access_log    /var/vcap/sys/log/nginx_gorouter/access.log;
 
-    log_format main  '$host - [$time_local] '
+    log_format main  '<%= spec.networks.send(properties.networks.apps).ip %> $host - [$time_local] '
                      '"$request" $status $bytes_sent '
                      '"$http_referer" "$http_user_agent" '
                      '"$remote_addr" response_time:$upstream_response_time $upstream_cache_status "$http_x_forwarded_proto" '
@@ -54,7 +56,7 @@ http {
 
         keepalive_timeout  10;
 
-        access_log   /var/vcap/sys/log/nginx_gorouter/vcap.access.log main;
+        access_log   syslog:notice|/var/vcap/sys/log/nginx_gorouter/vcap.access.log main;
         server_name_in_redirect off;
         server_tokens off;
 

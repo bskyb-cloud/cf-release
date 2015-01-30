@@ -27,7 +27,9 @@ properties:
   syslog_aggregator.transport:
     description: "Transport to be used when forwarding logs (tcp|udp|relp)."
     default: "tcp"
-
+  router.nginx_syslog_name:
+    description: "Syslog name override for the nginx logs"
+    default: "vcap.frontend_nginx"
   router.port:
     description: "Listening Port for Router."
     default: 8899
