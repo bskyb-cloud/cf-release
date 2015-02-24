@@ -11,6 +11,7 @@ defaults
     timeout connect 30000ms
     timeout client <%= p("request_timeout_in_seconds").to_i * 1000 %>ms
     timeout server <%= p("request_timeout_in_seconds").to_i * 1000 %>ms
+    option forwardfor header X-LB-FORWARDED-FOR
 
 frontend http-in
     mode http
