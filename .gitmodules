@@ -61,9 +61,6 @@
 [submodule "src/gnatsd"]
 	path = src/gnatsd
 	url = https://github.com/apcera/gnatsd.git
-[submodule "src/loggregator"]
-	path = src/loggregator
-	url = https://github.com/cloudfoundry/loggregator
 [submodule "src/acceptance-tests"]
 	path = src/acceptance-tests
 	url = https://github.com/cloudfoundry/cf-acceptance-tests
@@ -88,3 +85,7 @@
 [submodule "src/smoke-tests"]
 	path = src/smoke-tests
 	url = https://github.com/cloudfoundry-incubator/cf-smoke-tests
+[submodule "src/loggregator"]
+        path = src/loggregator
+        url = https://github.com/nimbus-cloud/loggregator
+
