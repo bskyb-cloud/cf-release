@@ -202,6 +202,14 @@ nginx/newrelic_nginx_agent.tar.gz:
   sha: !binary |-
     OThhMWIxMDQ3NTM3MTcwNTkzMmZlYTQ3NjlmOGFjMWIwNDUxMTA2Zg==
   size: 5222
+nginx/nginx-1.6.2.tar.gz:
+  object_id: 041b7bdb-b770-4c6c-b797-565b7b1a423d
+  sha: 1a5458bc15acf90eea16353a1dd17285cf97ec35
+  size: 804164
+nginx/pcre-8.36.tar.gz:
+  object_id: 29a019ba-407b-4dfa-9558-480d6e4f80e0
+  sha: fb537757756818133d8157ec878bc11f5a93ef4d
+  size: 2009464
 golang/go1.2.1.linux-amd64.tar.gz:
   object_id: a5a3eaf9-54ac-47b6-bcf7-5ad59eafe787
   sha: !binary |-

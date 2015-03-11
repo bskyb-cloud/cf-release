@@ -29,7 +29,7 @@ http {
     tcp_nopush         on;
     tcp_nodelay        on;
 
-    keepalive_timeout  75 20;
+    keepalive_timeout  15 10;
 
     # Turning this on seems to want to break the etag headers. Disable for now.
     #gzip  on;
@@ -54,7 +54,7 @@ http {
         listen       *:80;
         server_name  "vcap.me";
 
-        keepalive_timeout  10;
+        keepalive_timeout  15 10;
 
         access_log   syslog:notice|/var/vcap/sys/log/nginx_gorouter/vcap.access.log main;
         server_name_in_redirect off;
