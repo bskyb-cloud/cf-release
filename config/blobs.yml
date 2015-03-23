@@ -290,3 +290,7 @@ python-buildpack/python_buildpack-offline-v1.0.1.zip:
   sha: !binary |-
     ZjY5ZWQ4MzFlNmZjNDY1NDczOGU1ZDBlYTI1M2UxMzJjMGJiMzUxMw==
   size: 272135235
+golang/go1.3.1.linux-amd64.tar.gz:
+  object_id: b4778c9a-1994-4dda-b7a2-97ae93e1b835
+  sha: 3af011cc19b21c7180f2604fd85fbc4ddde97143
+  size: 51930765
