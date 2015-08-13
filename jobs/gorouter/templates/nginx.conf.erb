@@ -56,7 +56,7 @@ http {
 
         keepalive_timeout  15 10;
 
-        access_log   syslog:notice|/var/vcap/sys/log/nginx_gorouter/vcap.access.log main;
+        access_log   /var/vcap/sys/log/nginx_gorouter/vcap.access.log main;
         server_name_in_redirect off;
         server_tokens off;
 
