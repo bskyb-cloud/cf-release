@@ -299,3 +299,7 @@ golang/go1.4.2.linux-amd64.tar.gz:
   sha: !binary |-
     NTAyMGFmOTRiNTJiNjVjYzliNmYxMWQ1MGE2N2U0YmFlMDdiMGFmZg==
   size: 62442704
+rootfs/cflinuxfs2.tar.gz:
+  object_id: b6fff38f-2996-496e-abe8-3fb713316f30
+  sha: 507cb19efd6e4188595ac38e0ab5f55c16a6fa75
+  size: 248487779
