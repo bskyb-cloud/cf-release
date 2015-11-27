@@ -26,7 +26,7 @@ case $1 in
     cp -a $BIN_DIR/symlink_logs /etc/cron.hourly
     cp -a $PACKAGE_DIR/send_error_mail /etc/cron.daily
 
-    exec rsyslogd -f $JOB_DIR/config/rsyslogd.conf -i $PIDFILE -c 4 -x
+    exec rsyslogd -f $JOB_DIR/config/rsyslogd.conf -i $PIDFILE
 
     ;;
 
