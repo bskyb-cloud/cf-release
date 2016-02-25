@@ -459,3 +459,6 @@ properties:
 
   cc.feature_disabled_message:
     description: "Custom message to use for a disabled feature."
+
+  cc.zone:
+    description: "Site, datacenter name"
