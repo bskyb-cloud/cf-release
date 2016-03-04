@@ -1,26 +1,18 @@
 ---
 name: nats_stream_forwarder
+
+description: "The NATS Stream Forwarder listens to a configured NATS server and logs all messages."
+
 templates:
   nats_stream_forwarder.rb: bin/nats_stream_forwarder.rb
   nats_stream_forwarder_ctl.erb: bin/nats_stream_forwarder_ctl
-  syslog_forwarder.conf.erb: config/syslog_forwarder.conf
+
 packages:
   - common
-  - ruby
+  - ruby-2.1.6
   - nats
-  - syslog_aggregator
-properties:
-  syslog_aggregator.address:
-    description: "IP address for syslog aggregator"
-  syslog_aggregator.port:
-    description: "TCP port of syslog aggregator"
-  syslog_aggregator.all:
-    description: "Define whether forwarders should send all their syslog data to our aggregator."
-    default: false
-  syslog_aggregator.transport:
-    description: "Transport to be used when forwarding logs (tcp|udp|relp)."
-    default: "tcp"
 
+properties:
   nats_props:
     description:
     default: "nats"
@@ -30,7 +22,7 @@ properties:
     description: "Username for server authentication."
   nats.password:
     description: "Password for server authentication."
-  nats.address:
-    description: "NATS address"
+  nats.machines:
+    description: "NATS addresses"
   nats.port:
     description: "The port for the NATS server to listen on."

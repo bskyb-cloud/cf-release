@@ -1,32 +1,26 @@
 ---
 name: etcd
+
+description: "The ETCD server provides a highly-available key value store that is used by the HM9000 and the Doppler server."
+
 templates:
+  etcd_bosh_utils.sh.erb: bin/etcd_bosh_utils.sh
   etcd_ctl.erb: bin/etcd_ctl
-  syslog_forwarder.conf.erb: config/syslog_forwarder.conf
+  drain: bin/drain
+
 packages:
   - common
   - etcd
-  - syslog_aggregator
 
 properties:
-  syslog_aggregator.address:
-    description: "IP address for syslog aggregator"
-  syslog_aggregator.port:
-    description: "TCP port of syslog aggregator"
-  syslog_aggregator.all:
-    description: "Define whether forwarders should send all their syslog data to our aggregator."
-    default: false
-  syslog_aggregator.transport:
-    description: "Transport to be used when forwarding logs (tcp|udp|relp)."
-    default: "tcp"
-
-  heartbeat_interval_in_milliseconds:
+  etcd.heartbeat_interval_in_milliseconds:
     description: "Interval between heartbeats. See https://coreos.com/docs/cluster-management/debugging/etcd-tuning"
     default: 50
-  election_timeout_in_milliseconds:
+  etcd.election_timeout_in_milliseconds:
     description: "Time without recieving a heartbeat before peer should attempt to become leader. See https://coreos.com/docs/cluster-management/debugging/etcd-tuning"
     default: 1000
   etcd.machines:
     description: "IPs of etcd machines"
-  networks.apps:
-    description: "Used to get our IP address"
+  etcd.log_sync_timeout_in_seconds:
+    description: "Time to wait for a joining node to finish syncing logs with the existing cluster in seconds"
+    default: 30

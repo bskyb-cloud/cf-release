@@ -1,26 +1,18 @@
 ---
 name: collector
+
+description: "The collector will discover the various components on the message bus and query their `/healthz` and `/varz` interfaces. The metric data collected is published to collector plugins such as OpenTSDB, AWS CloudWatch and DataDog."
+
 templates:
   collector_ctl.erb: bin/collector_ctl
   config.yml.erb: config/config.yml
-  syslog_forwarder.conf.erb: config/syslog_forwarder.conf
+
 packages:
 - common
 - collector
-- ruby
-- syslog_aggregator
-properties:
-  syslog_aggregator.address:
-    description: "IP address for syslog aggregator"
-  syslog_aggregator.port:
-    description: "TCP port of syslog aggregator"
-  syslog_aggregator.all:
-    description: "Define whether forwarders should send all their syslog data to our aggregator."
-    default: false
-  syslog_aggregator.transport:
-    description: "Transport to be used when forwarding logs (tcp|udp|relp)."
-    default: "tcp"
+- ruby-2.1.6
 
+properties:
   collector.aws.access_key_id:
     description: "AWS access key for CloudWatch access"
   collector.aws.secret_access_key:
@@ -31,6 +23,9 @@ properties:
     description: "Datadog application key"
   collector.deployment_name:
     description: "name for this bosh deployment. All metrics will be tagged with deployment:XXX when sending them to CloudWatch, Datadog and Graphite"
+  collector.logging_level:
+    description: "the logging level for the collector"
+    default: info
   collector.intervals.discover:
     description: "the interval in seconds that the collector attempts to discover components"
     default: 60

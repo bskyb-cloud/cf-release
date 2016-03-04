@@ -1,5 +1,8 @@
 ---
 name: postgres
+
+description: "The Postgres server provides a single instance Postgres database that can be used with the Cloud Controller or the UAA. It does not provide highly-available configuration."
+
 templates:
   postgres_ctl.erb: bin/postgres_ctl
   postgresql.conf.erb: config/postgresql.conf
@@ -8,9 +11,11 @@ templates:
   postgres_backup.erb: bin/postgres_backup  
   pg_backup.sh.erb: bin/pg_backup.sh
   utils.sh: bin/utils.sh
+
 packages:
   - common
   - postgres
+
 properties:
   databases.db_scheme:
     description: "The database scheme"
@@ -24,6 +29,10 @@ properties:
     description: "A list of database roles and associated properties to create"
   databases.max_connections:
     description: "Maximum number of database connections"
+  databases.log_line_prefix:
+    description: "The postgres `printf` style string that is output at the beginning of each log line"
+    default: "%m: "
+
   databases.backup.enable:
     default: false
   databases.backup.first_node_only:

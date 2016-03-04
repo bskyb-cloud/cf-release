@@ -2,8 +2,7 @@
 
 set -e -x
 
-export GOROOT=$(readlink -nf /var/vcap/packages/golang)
-export PATH=/var/vcap/packages/git/bin:${PATH}
+export GOROOT=$(readlink -nf /var/vcap/packages/golang1.4)
 export PATH=${GOROOT}/bin:${PATH}
 
 export PATH=/var/vcap/packages/cli/bin:${PATH} # put the cli on the path
@@ -18,6 +17,8 @@ export CF_COLOR=false
 export CONFIG=/var/vcap/jobs/acceptance-tests/bin/config.json
 
 mkdir -p /var/vcap/sys/log/acceptance_tests
+rm -rf /var/vcap/sys/log/acceptance_tests/*
+
 cd /var/vcap/packages/acceptance-tests/src/github.com/cloudfoundry/cf-acceptance-tests
 
 echo '################################################################################################################'
@@ -30,16 +31,37 @@ echo '##########################################################################
 echo "Running acceptance tests..."
 
 EXITSTATUS=0
-test_command=<%= properties.acceptance_tests.diego ? "bin/test_diego" : "bin/test" %>
+
+test_command="bin/test_via_ginkgo"
+
 nodes=<%= properties.acceptance_tests.nodes %>
-skips=<%= properties.acceptance_tests.include_sso ? "" : "-skip=SSO" %>
+
+skipPackages="-skipPackage="
+skipPackages+=<%= properties.acceptance_tests.include_v3 ? "" : "v3," %>
+skipPackages+=<%= properties.acceptance_tests.include_security_groups ? "" : "security_groups," %>
+skipPackages+=<%= properties.acceptance_tests.include_logging ? "" : "logging," %>
+skipPackages+=<%= properties.acceptance_tests.include_operator ? "" : "operator," %>
+skipPackages+=<%= properties.acceptance_tests.include_internet_dependent ? "" : "internet_dependent," %>
+skipPackages+=<%= properties.acceptance_tests.include_services ? "" : "services," %>
+skipPackages+=<%= properties.acceptance_tests.include_routing_api ? "" : "routing_api," %>
+[[ $skipPackages == *, ]] && skipPackages=${skipPackages%?} # strip trailing comma
+
+<% skips = [] %>
+<% skips.push("SSO") unless properties.acceptance_tests.include_sso %>
+<% if_p("acceptance_tests.skip_regex") { skips.push properties.acceptance_tests.skip_regex } %>
+skips=<%= skips.empty? ? "" : %Q[-skip="#{skips.join("|")}"] %>
+
 verbose=<%= properties.acceptance_tests.verbose ? "-v" : "" %>
-$test_command -randomizeAllSpecs $verbose -nodes=$nodes $skips -keepGoing || EXITSTATUS=$?
+
+$test_command -noColor -slowSpecThreshold=120 -randomizeAllSpecs $verbose -nodes=$nodes $skipPackages $skips -keepGoing || EXITSTATUS=$?
 
 echo "Acceptance Tests Complete; exit status: $EXITSTATUS"
 
-for i in /var/vcap/sys/log/acceptance_tests/*.txt; do
-  mv $i $i.log # needed to make download-logs work
+for i in /var/vcap/sys/log/acceptance_tests/*; do
+  if [ -e "$i" ]
+  then
+    mv $i $i.log # needed to make download-logs work
+  fi
 done
 
 exit $EXITSTATUS

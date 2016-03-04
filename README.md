@@ -1,20 +1,27 @@
+[![Build Status](https://travis-ci.org/cloudfoundry/cf-release.svg?branch=develop)](https://travis-ci.org/cloudfoundry/cf-release)
+
 # Welcome to Cloud Foundry
 
 Cloud Foundry is an open platform as a service (PaaS) that provides a choice of clouds, developer frameworks, and application services. Cloud Foundry makes it faster and easier to build, test, deploy, and scale applications.
 
 This repository contains the Cloud Foundry source code.
 
-Our documentation (currently a work in progress) is available here: [http://docs.cloudfoundry.org/](http://docs.cloudfoundry.org/).
+Our documentation (currently a work in progress) is available here: [http://docs.cloudfoundry.org/](http://docs.cloudfoundry.org/)
+
+Release notes for final releases are available here:
+[https://github.com/cloudfoundry/cf-release/releases](https://github.com/cloudfoundry/cf-release/releases)
 
 ## About Branches
 
 The [**develop**](https://github.com/cloudfoundry/cf-release/tree/develop) branch is where we do active development. Although we endeavor to keep the [**develop**](https://github.com/cloudfoundry/cf-release/tree/develop) branch stable, we do not guarantee that any given commit will deploy cleanly.
 
-After passing all unit, integration, smoke, & acceptance tests, commits from the develop branch are merged to [**master**](https://github.com/cloudfoundry/cf-release/tree/master).
+The [**release-candidate**](https://github.com/cloudfoundry/cf-release/tree/release-candidate) branch has passed all of our unit, integration, smoke, & acceptance tests, but has not been used in a final release yet. This branch should be fairly stable.
 
-At semi-regular intervals (usually twice a month) a [**release-candidate**](https://github.com/cloudfoundry/cf-release/tree/release-candidate) branch is made from master. The RC branch is used to test upgrading from the previous release. 
+The [**master**](https://github.com/cloudfoundry/cf-release/tree/master) branch points to the most recent stable final release.
 
-If upgrading to the RC branch succeeds with smoke and acceptance test errands passing, then a new [**release**](https://github.com/cloudfoundry/cf-release/releases) is tagged.
+At semi-regular intervals a final release is created from the [**release-candidate**](https://github.com/cloudfoundry/cf-release/tree/release-candidate) branch. This final release is tagged and pushed to the [**master**](https://github.com/cloudfoundry/cf-release/tree/master) branch.
+
+Pushing to any branch other than [**develop**](https://github.com/cloudfoundry/cf-release/tree/develop) will create problems for the CI pipeline, which relies on fast forward merges. To recover from this condition follow the instructions [here](docs/fix_commit_to_master.md).
 
 ## Repository Contents
 
@@ -40,7 +47,10 @@ In order to deploy Cloud Foundry with BOSH, you will need to create a manifest.
 To do so, ensure that you have installed [Spiff](https://github.com/cloudfoundry-incubator/spiff) before running `./generate_deployment_manifest <infrastructure-type>`; where `<infrastructure-type>` is one of `aws`, `vsphere`, or `warden`.
 This script merges together several manifest stubs from the templates directory using Spiff. Consult the [spiff repository](https://github.com/cloudfoundry-incubator/spiff) for more information on installing and using spiff.
 
+A complete [minimal example manifest for AWS](https://github.com/cloudfoundry/cf-release/tree/master/example_manifests) and instructions suitable for getting started with Cloud Foundry is available.
+
 A complete [sample manifest for vSphere](http://docs.cloudfoundry.org/deploying/vsphere/cloud-foundry-example-manifest.html) is also available in the Cloud Foundry documentation.
+
 
 ## Cloud Foundry Components (V2)
 
@@ -50,10 +60,16 @@ The components in a V2 deployment are:
 
 | Component                                                                     | Description                                                                                                                                                         | Build Status                                                                                                                                                 |
 |-------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [Cloud Controller (cc)](http://github.com/cloudfoundry/cloud_controller_ng) | The primary API entry point for Cloud Foundry.                                                                                                                      |<a href="https://travis-ci.org/cloudfoundry/cloud_controller_ng"><img src="https://travis-ci.org/cloudfoundry/cloud_controller_ng.png" alt="Build Status"></a>|
+| [Cloud Controller (cc)](http://github.com/cloudfoundry/cloud_controller_ng) | The primary API entry point for Cloud Foundry. Api documentation [here.](http://apidocs.cloudfoundry.org)                                                                                                                     |<a href="https://travis-ci.org/cloudfoundry/cloud_controller_ng"><img src="https://travis-ci.org/cloudfoundry/cloud_controller_ng.png" alt="Build Status"></a>|
 | [gorouter](https://github.com/cloudfoundry/gorouter)                          | The central router that manages traffic to applications deployed on Cloud Foundry.                                                                                  |<a href="https://travis-ci.org/cloudfoundry/gorouter"><img src="https://travis-ci.org/cloudfoundry/gorouter.png" alt="Build Status"></a>                      |
 | [DEA (dea_next)](https://github.com/cloudfoundry/dea_ng)                      | The droplet execution agent (DEA) performs two key activities in Cloud Foundry: staging and hosting applications.                                                   |<a href="https://travis-ci.org/cloudfoundry/dea_ng"><img src="https://travis-ci.org/cloudfoundry/dea_ng.png" alt="Build Status"></a>                          |
 | [Health Manager](https://github.com/cloudfoundry/hm9000)                      | The health manager monitors the state of the applications and ensures that started applications are indeed running, their versions and number of instances correct. |<a href="https://travis-ci.org/cloudfoundry/health_manager"><img src="https://travis-ci.org/cloudfoundry/health_manager.png" alt="Build Status"></a>          |
+| [UAA](https://github.com/cloudfoundry/uaa)                                    | The UAA (User Account and Authentication) is the identity management service for Cloud Foundry.                                           |<a href="https://travis-ci.org/cloudfoundry/uaa"><img src="https://travis-ci.org/cloudfoundry/uaa.png" alt="Build Status"></a>                          |
+| [Login Server](https://github.com/cloudfoundry/login-server)                  | Handles authentication for Cloud Foundry and delegates all other identity management tasks to the UAA. Also provides OAuth2 endpoints issuing tokens to client apps for Cloud Foundry (the tokens come from the UAA and no data are stored locally).                                           |<a href="https://travis-ci.org/cloudfoundry/login-server"><img src="https://travis-ci.org/cloudfoundry/login-server.png" alt="Build Status"></a>                          |
+| [Collector](https://github.com/cloudfoundry/collector)                                    | The collector will discover the various components on the message bus and query their /healthz and /varz interfaces.                                           |<a href="https://travis-ci.org/cloudfoundry/collector"><img src="https://travis-ci.org/cloudfoundry/collector.png" alt="Build Status"></a>                          |
+| [Loggregator](https://github.com/cloudfoundry/loggregator)                                    | Loggregator is the user application logging subsystem for Cloud Foundry.                                           |<a href="https://travis-ci.org/cloudfoundry/loggregator"><img src="https://travis-ci.org/cloudfoundry/loggregator.png" alt="Build Status"></a>                          |
+
+
 
 ## Useful scripts
 

@@ -1,10 +1,8 @@
 ---
 logging:
   file: /var/vcap/sys/log/collector/collector.log
-  <% if properties.syslog_aggregator && properties.syslog_aggregator.address %>
   syslog: vcap.collector
-  <% end %>
-  level: info
+  level: <%= properties.collector.logging_level %>
 
 deployment_name: <%= properties.collector.deployment_name %>
 

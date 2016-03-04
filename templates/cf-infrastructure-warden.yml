@@ -17,6 +17,7 @@ update:
   serial: true
 
 properties:
+  <<: (( merge ))
   ssl:
     skip_cert_verify: true
 
@@ -27,7 +28,8 @@ properties:
   dea_next:
     evacuation_bail_out_time_in_seconds: 0
     memory_mb: 8192
-    disk_mb: 16384
+    disk_mb: 32768
+    disk_overcommit_factor: 3
     kernel_network_tuning_enabled: false
 
   loggregator_endpoint:
@@ -36,12 +38,17 @@ properties:
   nats:
     user: nats
     password: nats
+    monitor_port: 4221
     address: (( jobs.nats_z1.networks.cf1.static_ips.[0] ))
+
+  hm9000:
+    url: (( "https://hm9000." jobs.ha_proxy_z1.networks.cf1.static_ips.[0] ".xip.io" ))
 
   cc:
     default_quota_definition: default
     default_app_memory: 256
     bulk_api_password: bulk-password
+    internal_api_password: internal-password
     staging_upload_user: upload-user
     staging_upload_password: upload-password
     db_encryption_key: db-encryption-key
@@ -55,6 +62,7 @@ properties:
     buildpacks:
       fog_connection: (( meta.fog_config ))
     diego: (( merge || false ))
+    diego_docker: (( merge || false ))
 
   uaa:
     catalina_opts: -Xmx192m -XX:MaxPermSize=128m
@@ -90,34 +98,69 @@ properties:
       username: batch-username
       password: batch-password
     clients:
+      <<: (( merge || nil ))
       login:
         secret: login-secret
-        redirect-uri: (( "http://login." domain ))
       cc-service-dashboards:
         secret: cc-broker-secret
         scope: openid,cloud_controller_service_permissions.read
         authorities: clients.read,clients.write,clients.admin
         authorized-grant-types: client_credentials
       developer_console:
+        override: true
+        scope: openid,cloud_controller.read,cloud_controller.write,password.write,console.admin,console.support
+        authorities: scim.write,scim.read,cloud_controller.read,cloud_controller.write,password.write,uaa.admin,uaa.resource,cloud_controller.admin,billing.admin
+        authorized-grant-types: authorization_code,client_credentials
+        access-token-validity: 1209600
+        refresh-token-validity: 1209600
+        redirect-uri: (( "https://console." domain "/oauth/callback" ))
         secret: console-secret
       app-direct:
+        override: true
+        authorities: app_direct_invoice.write
+        authorized-grant-types: authorization_code,client_credentials,password,refresh_token,implicit
+        access-token-validity: 1209600
+        refresh-token-validity: 1209600
+        redirect-uri: (( properties.login.links.home ))
         secret: app-direct-secret
-      support-services:
-        secret: support-services-secret
-      servicesmgmt:
-        secret: servicesmgmt-secret
-      space-mail:
-        secret: space-mail-secret
       notifications:
         secret: notification-secret
+      doppler:
+        secret: doppler-secret
+      cloud_controller_username_lookup:
+        secret: cloud-controller-username-lookup-secret
+      gorouter:
+        secret: gorouter-secret
     scim:
       users:
-      - admin|admin|scim.write,scim.read,openid,cloud_controller.admin,clients.read,clients.write
+      - admin|admin|scim.write,scim.read,openid,cloud_controller.admin,clients.read,clients.write,doppler.firehose
     no_ssl: true
 
   login:
     catalina_opts: -Xmx96m -XX:MaxPermSize=64m
     protocol: http
+    links:
+      home: (( "https://console." domain ))
+    uaa_certificate: |
+          -----BEGIN CERTIFICATE-----
+          MIIDETCCAfmgAwIBAgIJANZuykf1uh3LMA0GCSqGSIb3DQEBBQUAMB8xHTAbBgNV
+          BAMMFCouMTAuMjQ0LjAuMzQueGlwLmlvMB4XDTE0MTIyNDIzMTkxM1oXDTI0MTIy
+          MTIzMTkxM1owHzEdMBsGA1UEAwwUKi4xMC4yNDQuMC4zNC54aXAuaW8wggEiMA0G
+          CSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDCjq73Fgwfj2UT0/+wR9kVVsGAguMj
+          poA0opLCgE0yHStAhSvqq7YpO39dH3vBMWXyr2xIfDyaeZyhV86jWu/ZKswGjNGI
+          ZKv/yUINe1bqukOBqd+SHVvkVhxSLJuD1MR83JQMONRjOPJp661/ABpVhnrNfBiA
+          AA6aaFv4/KbyGY/E1FHoUXqEdh4WxaJdfX6SbgG05ArWxhSD7PNj4CYvJWGCdvqP
+          KBsvWFDrkxBHn5h1JIDfZJB8FKP6vaHBr7MU4pIHM+qaZ1Y+8ja0wcgkHn4YHcp6
+          IOhqpck7LaH5Qq2ydYFNTcG4fTbG0jXqcit2WSUxRkXzWnrgo2E0SiHBAgMBAAGj
+          UDBOMB0GA1UdDgQWBBSpCtEDtEvMwaZzXN6Lvk5U7Eyn2zAfBgNVHSMEGDAWgBSp
+          CtEDtEvMwaZzXN6Lvk5U7Eyn2zAMBgNVHRMEBTADAQH/MA0GCSqGSIb3DQEBBQUA
+          A4IBAQB1YIHmw3gPiMn8WDR4yVxDvSVgFHY6ZE1iZb17vVs4N2/mhQZXWJ2nZV02
+          goAivtgxHOj39sK5OBWsGvrQo5H8dt1t4XmbwB1C6xRerGc25dhDRq42RqhCN0RJ
+          zzjd9b8YSiwtAaZlW36l2jVDLfRapb00tWToF9qYrDrmKy2sekS7g2hbiRStcue/
+          bpT4X/CHxb/lUbpL4m8BpDbkGiOJgl+SEHRx5tZ0Kob/RDQRCcN3p+71FRbDIEBj
+          +8sJl/yUUUPwQ6PNYx6cjtlICWJ1G0l0hRa141VXPqSNCmxYS4dp/8ifPCSoLc+k
+          9TXFkuGl+86CPTyyMJxyMhEcAGZT
+          -----END CERTIFICATE-----
 
   router:
     status:
@@ -175,7 +218,6 @@ properties:
     admin_user: admin
     admin_password: admin
     skip_ssl_validation: true
-    diego: (( properties.cc.diego ))
     nodes: 1
 
   smoke_tests:
@@ -185,6 +227,7 @@ properties:
     password: admin
     org: SMOKE_TEST_ORG
     space: SMOKE_TEST_SPACE
+    ginkgo_opts: ~
     skip_ssl_validation: true
 
 jobs:
@@ -201,32 +244,25 @@ jobs:
       - name: cf2
         static_ips: (( static_ips(1) ))
 
-  # set up static IP for loggregator trafficcontroller
   - name: loggregator_trafficcontroller_z1
     instances: 1
     networks:
       - name: cf1
-        static_ips: (( static_ips(2) ))
 
   - name: loggregator_trafficcontroller_z2
     instances: 0
     networks:
       - name: cf2
-        static_ips: (( static_ips(2) ))
 
-  # set up static IP for loggregator
   - name: loggregator_z1
     instances: 1
     networks:
       - name: cf1
-        static_ips: (( static_ips(3, 4) ))
 
-  # set up static IP for loggregator
   - name: loggregator_z2
     instances: 0
     networks:
       - name: cf2
-        static_ips: (( static_ips(3, 4) ))
 
   - name: hm9000_z2
     instances: 0
@@ -243,6 +279,18 @@ jobs:
       - name: cf2
         static_ips: (( static_ips(9) ))
 
+  - name: consul_z1
+    instances: 0
+    networks:
+      - name: cf1
+        static_ips: (( static_ips(13, 14, 15) ))
+
+  - name: consul_z2
+    instances: 0
+    networks:
+      - name: cf2
+        static_ips: (( static_ips(13, 14, 15) ))
+
   # only need one router, and set up static IPs
   - name: router_z1
     instances: 1
@@ -254,6 +302,18 @@ jobs:
     networks:
       - name: cf2
         static_ips: (( static_ips(5) ))
+
+  - name: routing_api_z1
+    instances: 0
+    networks:
+      - name: cf1
+        static_ips: (( static_ips(12) ))
+
+  - name: routing_api_z2
+    instances: 0
+    networks:
+      - name: cf2
+        static_ips: (( static_ips(12) ))
 
   - name: login_z2
     instances: 0
@@ -286,12 +346,20 @@ jobs:
 
   # add a persistent disk to the CC, and only need one
   - name: api_z1
-    persistent_disk: 4096
+    persistent_disk: 8192
     templates:
       - name: cloud_controller_ng
+        release: cf
       - name: cloud_controller_clock
+        release: cf
       - name: cloud_controller_worker
+        release: cf
       - name: metron_agent
+        release: cf
+      - name: nfs_mounter
+        release: cf
+      - name: consul_agent
+        release: cf
 
   - name: api_worker_z1
     instances: 0
@@ -333,39 +401,53 @@ jobs:
       ha_proxy:
         ssl_pem: |
           -----BEGIN CERTIFICATE-----
-          MIICLzCCAZgCCQCSoIG3LoeSMTANBgkqhkiG9w0BAQUFADBcMQswCQYDVQQGEwJV
-          UzELMAkGA1UECBMCQ0ExFjAUBgNVBAcTDVNhbiBGcmFuY2lzY28xEDAOBgNVBAoT
-          B1Bpdm90YWwxFjAUBgNVBAsTDUNsb3VkIEZvdW5kcnkwHhcNMTMxMDE3MjMxNzM5
-          WhcNMTQxMDE3MjMxNzM5WjBcMQswCQYDVQQGEwJVUzELMAkGA1UECBMCQ0ExFjAU
-          BgNVBAcTDVNhbiBGcmFuY2lzY28xEDAOBgNVBAoTB1Bpdm90YWwxFjAUBgNVBAsT
-          DUNsb3VkIEZvdW5kcnkwgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBANqyjJMH
-          FDbJ4XM2vLRxz6i82Gd2Y2dnAKYgu67FgheHGQJSv38lvn8JrAOBXu2QJgP8sJa+
-          XqUWUTMo9BWvhvedQLojtcpLdULc0FhlIXn8bThGlTQyrSg9QJobhQZGziFVrdQM
-          UZy4X+s6A2Szb9iOg3TYibnnfnuvdZli83eRAgMBAAEwDQYJKoZIhvcNAQEFBQAD
-          gYEAbFu65WT+czpiJqHhNz5AnGYA8kieVlV7KhcljLtsU4Sxut5Vq9uXFBE09KCg
-          YkyZ9KfzXArTeRCfcbm5xq12I+1nf6q0QjT1y3P6ztax0rpyb0i+4GWvA+ruMhfx
-          n4QM1MkiJVYBGKkXFZDd1zsdR3pY4vm1uiMY75IvJQfgb08=
+          MIIDETCCAfmgAwIBAgIJANZuykf1uh3LMA0GCSqGSIb3DQEBBQUAMB8xHTAbBgNV
+          BAMMFCouMTAuMjQ0LjAuMzQueGlwLmlvMB4XDTE0MTIyNDIzMTkxM1oXDTI0MTIy
+          MTIzMTkxM1owHzEdMBsGA1UEAwwUKi4xMC4yNDQuMC4zNC54aXAuaW8wggEiMA0G
+          CSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDCjq73Fgwfj2UT0/+wR9kVVsGAguMj
+          poA0opLCgE0yHStAhSvqq7YpO39dH3vBMWXyr2xIfDyaeZyhV86jWu/ZKswGjNGI
+          ZKv/yUINe1bqukOBqd+SHVvkVhxSLJuD1MR83JQMONRjOPJp661/ABpVhnrNfBiA
+          AA6aaFv4/KbyGY/E1FHoUXqEdh4WxaJdfX6SbgG05ArWxhSD7PNj4CYvJWGCdvqP
+          KBsvWFDrkxBHn5h1JIDfZJB8FKP6vaHBr7MU4pIHM+qaZ1Y+8ja0wcgkHn4YHcp6
+          IOhqpck7LaH5Qq2ydYFNTcG4fTbG0jXqcit2WSUxRkXzWnrgo2E0SiHBAgMBAAGj
+          UDBOMB0GA1UdDgQWBBSpCtEDtEvMwaZzXN6Lvk5U7Eyn2zAfBgNVHSMEGDAWgBSp
+          CtEDtEvMwaZzXN6Lvk5U7Eyn2zAMBgNVHRMEBTADAQH/MA0GCSqGSIb3DQEBBQUA
+          A4IBAQB1YIHmw3gPiMn8WDR4yVxDvSVgFHY6ZE1iZb17vVs4N2/mhQZXWJ2nZV02
+          goAivtgxHOj39sK5OBWsGvrQo5H8dt1t4XmbwB1C6xRerGc25dhDRq42RqhCN0RJ
+          zzjd9b8YSiwtAaZlW36l2jVDLfRapb00tWToF9qYrDrmKy2sekS7g2hbiRStcue/
+          bpT4X/CHxb/lUbpL4m8BpDbkGiOJgl+SEHRx5tZ0Kob/RDQRCcN3p+71FRbDIEBj
+          +8sJl/yUUUPwQ6PNYx6cjtlICWJ1G0l0hRa141VXPqSNCmxYS4dp/8ifPCSoLc+k
+          9TXFkuGl+86CPTyyMJxyMhEcAGZT
           -----END CERTIFICATE-----
           -----BEGIN RSA PRIVATE KEY-----
-          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
+          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
           -----END RSA PRIVATE KEY-----
 
   - name: acceptance_tests
-    instances: 1
-
-  - name: acceptance_tests_diego
     instances: 1
 
   - name: smoke_tests

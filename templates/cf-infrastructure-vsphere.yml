@@ -7,7 +7,7 @@ meta:
 compilation:
   cloud_properties:
     ram: 1024
-    disk: 6144
+    disk: 8192
     cpu: 2
 networks: (( merge ))
 
@@ -95,7 +95,7 @@ jobs:
         static_ips: (( static_ips(0) ))
 
   - name: nats_z1
-    instances: 0
+    instances: 1
     networks:
       - name: cf1
         static_ips: (( static_ips(1) ))
@@ -130,29 +130,37 @@ jobs:
       - name: cf2
         static_ips: (( static_ips(5, 6) ))
 
-  - name: loggregator_z1
-    instances: 2
+  - name: routing_api_z1
+    instances: 0
     networks:
       - name: cf1
-        static_ips: (( static_ips(10, 11) ))
+        static_ips: (( static_ips(16) ))
 
-  - name: loggregator_z2
-    instances: 2
+  - name: routing_api_z2
+    instances: 0
     networks:
       - name: cf2
-        static_ips: (( static_ips(10, 11) ))
+        static_ips: (( static_ips(16) ))
+
+  - name: loggregator_z1
+    instances: 1
+    networks:
+      - name: cf1
+
+  - name: loggregator_z2
+    instances: 1
+    networks:
+      - name: cf2
 
   - name: loggregator_trafficcontroller_z1
     instances: 1
     networks:
       - name: cf1
-        static_ips: (( static_ips(9) ))
 
   - name: loggregator_trafficcontroller_z2
     instances: 1
     networks:
       - name: cf2
-        static_ips: (( static_ips(9) ))
 
   - name: ha_proxy_z1
     instances: 1
@@ -172,21 +180,32 @@ jobs:
       - name: cf2
         static_ips: (( static_ips(13) ))
 
+  - name: consul_z1
+    instances: 0
+    networks:
+      - name: cf1
+        static_ips: (( static_ips(17, 18, 19) ))
+
+  - name: consul_z2
+    instances: 0
+    networks:
+      - name: cf2
+        static_ips: (( static_ips(17, 18, 19) ))
   # using login template, that supports self-signed certs
   - name: login_z1
     templates: 
     - name: login
+    - name: metron_agent
+      release: cf
 
   - name: acceptance_tests
-    instances: 1
-
-  - name: acceptance_tests_diego
     instances: 1
 
   - name: smoke_tests
     instances: 1
 
 properties:
+  <<: (( merge ))
   domain: (( jobs.ha_proxy_z1.networks.cf1.static_ips.[0] ".xip.io" ))
   system_domain_organization: pivotal
 
