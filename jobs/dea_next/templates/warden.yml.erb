@@ -3,8 +3,10 @@ server:
   unix_domain_permissions: 0777
   unix_domain_path: /var/vcap/data/warden/warden.sock
   container_klass: Warden::Container::Linux
-  container_rootfs_path: /var/vcap/packages/rootfs_lucid64
+  container_rootfs_path: /var/vcap/packages/rootfs_cflinuxfs2
   container_depot_path: /var/vcap/data/warden/depot
+  container_rlimits:
+    core: <%= p("dea_next.rlimit_core") %>
   pidfile: /var/vcap/sys/run/warden/warden.pid
   quota:
     disk_quota_enabled: <%= p("disk_quota_enabled") %>
@@ -12,9 +14,7 @@ server:
 logging:
   file: /var/vcap/sys/log/warden/warden.log
   level: <%= p("dea_next.logging_level") %>
-  <% if_p("syslog_aggregator.address") do |syslog_aggregator| %>
   syslog: vcap.warden
-  <% end %>
 
 health_check_server:
   port: 2345
@@ -28,6 +28,7 @@ network:
   <% if_p("dea_next.allow_networks") do |allow_networks| %>
   allow_networks: <%= allow_networks %>
   <% end %>
+  allow_host_access: <%= p("dea_next.allow_host_access") %>
 
   # Interface MTU size
   # (for OpenStack use 1454 to avoid problems with rubygems with GRE tunneling)

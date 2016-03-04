@@ -1,25 +1,17 @@
 ---
 name: nats
+
+description: "The NATS server provides publish-subscribe messaging system for the Cloud Controller, the DEA , HM9000, and other Cloud Foundry components."
+
 templates:
   nats_ctl.erb: bin/nats_ctl
   nats.conf.erb: config/nats.conf
-  syslog_forwarder.conf.erb: config/syslog_forwarder.conf
+
 packages:
   - common
   - gnatsd
-  - syslog_aggregator
-properties:
-  syslog_aggregator.address:
-    description: "IP address for syslog aggregator"
-  syslog_aggregator.port:
-    description: "TCP port of syslog aggregator"
-  syslog_aggregator.all:
-    description: "Define whether forwarders should send all their syslog data to our aggregator."
-    default: false
-  syslog_aggregator.transport:
-    description: "Transport to be used when forwarding logs (tcp|udp|relp)."
-    default: "tcp"
 
+properties:
   networks.apps:
     description: "NATS network information"
   nats.user:

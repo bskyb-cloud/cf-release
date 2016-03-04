@@ -1,5 +1,8 @@
 ---
 name: login
+
+description: "Handles authentication in Cloud Foundry and delegates all other identity management tasks to the UAA. Also provides OAuth2 endpoints issuing tokens to client apps for Cloud Foundry (the tokens come from the UAA and no data are stored locally)."
+
 templates:
   login_ctl.erb: bin/login_ctl
   cf-registrar_ctl: bin/login_cf-registrar_ctl
@@ -13,28 +16,15 @@ templates:
   tomcat.server.xml.erb: config/tomcat/server.xml
   # Updates to Tomcat must also check web.xml
   web.xml.erb: config/tomcat/web.xml
-  syslog_forwarder.conf.erb: config/syslog_forwarder.conf
   uaa.crt.erb: config/uaa.crt
+  messages.properties.erb: config/messages.properties
 
 packages:
   - common
-  - ruby
-  - syslog_aggregator
+  - ruby-2.1.6
   - login
-  - git
 
 properties:
-  syslog_aggregator.address:
-    description: "IP address for syslog aggregator"
-  syslog_aggregator.port:
-    description: "TCP port of syslog aggregator"
-  syslog_aggregator.all:
-    description: "Define whether forwarders should send all their syslog data to our aggregator."
-    default: false
-  syslog_aggregator.transport:
-    description: "Transport to be used when forwarding logs (tcp|udp|relp)."
-    default: "tcp"
-
   login.brand:
     description: "The brand to use for the reset password emails, available values are oss and pivotal"
     default: oss
@@ -44,6 +34,8 @@ properties:
     description: "Certificate to import if the UAA is using self-signed certificates"
   login.catalina_opts:
     description:
+  login.notifications.url:
+    description: "The url for the notifications service (configure to use Notifications Service instead of SMTP server)"
   login.smtp:
     description: "SMTP server configuration, for password reset emails etc."
   login.smtp.host:
@@ -80,8 +72,12 @@ properties:
     description:
   login.uaa_base:
     description: "Location of the UAA."
+  login.self_service_links_enabled:
+    description: "Enable account creation and password reset links in the login server. Enabled by default."
   login.signups_enabled:
-    description: "Enable account creation flow in the login server. Enabled by default."
+      description: "Enable account creation and password reset links in the login server. Enabled by default. (DEPRECATED: Use login.self_service_links_enabled instead)"
+  login.invitations_enabled:
+    description: "Allows users to send invitations to email addresses outside the system and invite them to create an account. Disabled by default."
   domain:
     description: "The domain name for this CloudFoundry deploy"
   env.http_proxy:
@@ -99,28 +95,34 @@ properties:
   nats.machines:
     description: "IP of each NATS cluster member."
   networks.apps:
-    description: "Login network name"
-  uaa.clients.login.secret:
-    description:
+    description: "The Login network name"
   uaa.dump_requests:
     description:
   uaa.login.client_secret:
-    description:
+    description: 'Deprecated. Default login client secret if no login client is defined'
+  uaa.clients.login.secret:
+    description: 'Login client secret - overrides uaa.login.client_secret'
   uaa.require_https:
     description:
   login.protocol:
     default: "http"
     description: "The scheme in which login server should use to contact the UAA"
   login.saml.idpMetadataURL:
-    description: "URL location of the IDP Metadata."
+    description: "Deprecated: Use login.saml.providers list objects"
   login.saml.idp_metadata_file:
-    description: "Optional IDP Metadata file for the SAML login server."
+    description: "Deprecated: Use login.saml.providers list objects"
   login.saml.entityid:
     description: "The ID to represent this server"
   login.saml.idpEntityAlias:
-    description: "An alias for the IDP."
+    description: "Deprecated: Use login.saml.providers list objects"
   login.entity_id:
-    description: "The entity ID of the SAML login server."
+    description: "Deprecated: Use login.saml.entityid"
+  login.saml.signMetaData:
+    description: "Whether to sign XML metadata"
+    default: true
+  login.saml.signRequest:
+    description: "Whether to sign authentication requests"
+    default: true
   login.saml.keystore_name:
     description: "Name of the SAML login server keystore."
     default: "samlKeystore.jks"
@@ -137,14 +139,20 @@ properties:
   login.saml.serviceProviderCertificate:
     description: "Service provider certificate."
   login.saml.assertion_consumer_index:
-    description:
+    description: "Deprecated: Use login.saml.providers list objects"
     default: 1
   login.saml.nameidFormat:
-    description:
+    description: "Deprecated: Use login.saml.providers list objects"
     default: "urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress"
   login.saml.metadataTrustCheck:
-    description: "When true metadata signature will be verified for trust using PKIX with metadataTrustedKeys as anchors."
+    description: "Deprecated: Use login.saml.providers list objects"
     default: true
+  login.saml.providers:
+    description: "Contains a hash of SAML Identity Providers, the key is the IDP Alias, followed by key/value pairs for idpMetadata, nameID, assertionConsumerIndex, metadataTrustCheck, showSamlLoginLink, linkText, iconUrl"
+  login.saml.socket.connectionManagerTimeout:
+    description: "Timeout in milliseconds for connection pooling for SAML metadata HTTP requests"
+  login.saml.socket.soTimeout:
+    description: "Read timeout in milliseconds for SAML metadata HTTP requests"
   login.spring_profiles:
     description: "deprecated. use UAA configuration."
   login.ldap.profile_type:
@@ -180,3 +188,26 @@ properties:
     description: "Analytics code"
   login.analytics.domain:
     description: "Analytics domain"
+  login.messages:
+    description: |
+      A nested or flat hash of messages that the login server uses to display UI message
+      This will be flattened into a java.util.Properties file. The example below will lead
+      to four properties, where the key is the concatenated value delimited by dot, for example scope.tokens.read=message
+      Nested example:
+      messages:
+        scope:
+          tokens:
+            read: View details of your approvals you have granted to this and other applications
+            write: Cancel the approvals like this one that you have granted to this and other applications
+          cloud_controller:
+            read: View details of your applications and services
+            write: Push applications to your account and create and bind services
+      Flat example:
+      messages:
+        scope.tokens.read: View details of your approvals you have granted to this and other applications
+        scope.tokens.write: Cancel the approvals like this one that you have granted to this and other applications
+        scope.cloud_controller.read: View details of your applications and services
+        scope.cloud_controller.write: Push applications to your account and create and bind services
+  login.restricted_ips_regex:
+    description: "A pipe delimited set of regular expressions of IP addresses that can reach the listening HTTP port of the server."
+    default: 10\.\d{1,3}\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|169\.254\.\d{1,3}\.\d{1,3}|127\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.1[6-9]{1}\.\d{1,3}\.\d{1,3}|172\.2[0-9]{1}\.\d{1,3}\.\d{1,3}|172\.3[0-1]{1}\.\d{1,3}\.\d{1,3}

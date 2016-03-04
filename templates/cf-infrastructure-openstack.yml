@@ -3,22 +3,29 @@ meta:
   environment: ~
   networks: ~
 
-  openstack: (( merge ))
-
   stemcell:
     name: bosh-openstack-kvm-ubuntu-lucid-go_agent
     version: latest
 
   floating_static_ips: (( merge ))
 
+  resource_pools:
+    small:
+      cloud_properties:
+        instance_type: m1.small
+    medium:
+      cloud_properties:
+          instance_type: m1.medium
+    large:
+      cloud_properties:
+          instance_type: m1.large
+
 networks: (( merge ))
 
 properties:
+  <<: (( merge ))
   logger_endpoint:
     port: 4443
-
-  loggregator:
-    blacklisted_syslog_ranges: (( merge || [] ))
 
   cc: (( merge ))
 
@@ -32,9 +39,6 @@ properties:
   dea_next:
     deny_networks: (( merge || nil ))
     allow_networks: (( merge || nil ))
-
-  nats:
-    address: (( jobs.nats_z1.networks.cf1.static_ips.[0] ))
 
   ccdb:
     address: (( jobs.postgres_z1.networks.cf1.static_ips.[0] ))
@@ -81,49 +85,38 @@ properties:
         citext: true
 
 compilation:
-  cloud_properties:
-    instance_type: m1.medium
+  cloud_properties: (( merge || meta.resource_pools.medium.cloud_properties ))
 
 resource_pools:
   - name: small_z1
-    cloud_properties:
-      instance_type: m1.small
+    cloud_properties: (( merge || meta.resource_pools.small.cloud_properties ))
 
   - name: small_z2
-    cloud_properties:
-      instance_type: m1.small
+    cloud_properties: (( merge || meta.resource_pools.small.cloud_properties ))
 
   - name: medium_z1
-    cloud_properties:
-      instance_type: m1.medium
+    cloud_properties: (( merge || meta.resource_pools.medium.cloud_properties ))
 
   - name: medium_z2
-    cloud_properties:
-      instance_type: m1.medium
+    cloud_properties: (( merge || meta.resource_pools.medium.cloud_properties ))
 
   - name: large_z1
-    cloud_properties:
-      instance_type: m1.large
+    cloud_properties: (( merge || meta.resource_pools.large.cloud_properties  ))
 
   - name: large_z2
-    cloud_properties:
-      instance_type: m1.large
+    cloud_properties: (( merge || meta.resource_pools.large.cloud_properties  ))
 
   - name: runner_z1
-    cloud_properties:
-      instance_type: m1.large
+    cloud_properties: (( merge || meta.resource_pools.large.cloud_properties  ))
 
   - name: runner_z2
-    cloud_properties:
-      instance_type: m1.large
+    cloud_properties: (( merge || meta.resource_pools.large.cloud_properties  ))
 
   - name: router_z1
-    cloud_properties:
-      instance_type: m1.medium
+    cloud_properties: (( merge || meta.resource_pools.medium.cloud_properties  ))
 
   - name: router_z2
-    cloud_properties:
-      instance_type: m1.medium
+    cloud_properties: (( merge || meta.resource_pools.medium.cloud_properties  ))
 
 # This config is for the simplest Openstack config using just one AZ.
 # All values for "z2" and network "cf2" are set to null. They'll end up
@@ -168,23 +161,39 @@ jobs:
       - name: cf1
         static_ips: (( static_ips(5) ))
 
+  - name: routing_api_z1
+    instances: 0
+    networks:
+      - name: cf1
+        static_ips: (( static_ips(11) ))
+
+  - name: routing_api_z2
+    instances: 0
+    networks:
+      - name: cf2
+        static_ips: []
+
   - name: loggregator_z1
     instances: 1
     networks:
       - name: cf1
-        static_ips: (( static_ips(6) ))
 
   - name: loggregator_trafficcontroller_z1
     instances: 1
     networks:
       - name: cf1
-        static_ips: (( static_ips(7) ))
 
   - name: etcd_z1
     instances: 1
     networks:
       - name: cf1
         static_ips: (( static_ips(8, 9, 10) ))
+
+  - name: consul_z1
+    instances: 0
+    networks:
+      - name: cf1
+        static_ips: (( static_ips(12, 13, 14) ))
 
   - name: logs_z2
     instances: 0
@@ -210,17 +219,21 @@ jobs:
       - name: cf2
         static_ips: []
 
+  - name: consul_z2
+    instances: 0
+    networks:
+      - name: cf2
+        static_ips: []
+
   - name: loggregator_z2
     instances: 0
     networks:
      - name: cf2
-       static_ips: []
 
   - name: loggregator_trafficcontroller_z2
     instances: 0
     networks:
       - name: cf2
-        static_ips: []
 
   - name: uaa_z2
     instances: 0

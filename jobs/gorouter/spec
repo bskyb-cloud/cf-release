@@ -1,35 +1,27 @@
 ---
 name: gorouter
+
+description: "The Router maintains a list of live routes for the applications running on each DEA. The Router load balances requests (based on their Host header) between each application instance registered for a specific route. It requires to be behind a load balancer that can terminate SSL connections."
+
 templates:
   gorouter_ctl.erb: bin/gorouter_ctl
+  dns_health_check.erb: bin/dns_health_check
   gorouter.yml.erb: config/gorouter.yml
   gorouter_logrotate.cron.erb: config/gorouter_logrotate.cron
-  syslog_forwarder.conf.erb: config/syslog_forwarder.conf
   logrotate.conf.erb: config/logrotate.conf
   nginx_ctl.erb: bin/nginx_ctl
   nginx.conf.erb: config/nginx.conf
   mime.types: config/mime.types
   drain: bin/drain
+  cert.pem.erb: config/cert.pem
+  key.pem.erb: config/key.pem
+
 packages:
   - common
-  - golang
   - gorouter
-  - syslog_aggregator
   - nginx
+
 properties:
-  syslog_aggregator.address:
-    description: "IP address for syslog aggregator."
-  syslog_aggregator.port:
-    description: "TCP port of syslog aggregator."
-  syslog_aggregator.all:
-    description: "Define whether forwarders should send all their syslog data to our aggregator."
-    default: false
-  syslog_aggregator.transport:
-    description: "Transport to be used when forwarding logs (tcp|udp|relp)."
-    default: "tcp"
-  router.nginx_syslog_name:
-    description: "Syslog name override for the nginx logs"
-    default: "vcap.frontend_nginx"
   router.port:
     description: "Listening Port for Router."
     default: 8899
@@ -43,6 +35,31 @@ properties:
     description: "Username for HTTP basic auth to the varz/status endpoint."
   router.status.password:
     description: "Password for HTTP basic auth to the varz/status endpoint."
+  router.requested_route_registration_interval_in_seconds:
+    description: "Interval at which the router requests routes to be registered."
+    default: 20
+  router.number_of_cpus:
+    description: "Number of CPUs to utilize, the default (-1) will equal the number of available CPUs"
+    default: -1
+  router.debug_addr:
+    description: "Address at which to serve debug info"
+    default: "0.0.0.0:17001"
+  router.secure_cookies:
+    description: "Set secure flag on http cookies"
+    default: false
+  router.enable_ssl:
+    description: "Enable ssl termination on the router"
+    default: false
+  router.ssl_cert:
+    description: "The public ssl cert for ssl termination"
+    default: ""
+  router.ssl_key:
+    description: "The private ssl key for ssl termination"
+    default: ""
+  router.cipher_suites:
+    description: "Valid ssl cipher suites, golang tls constants separated by commas"
+    default: TLS_RSA_WITH_RC4_128_SHA:TLS_RSA_WITH_AES_128_CBC_SHA:TLS_RSA_WITH_AES_256_CBC_SHA:TLS_ECDHE_ECDSA_WITH_RC4_128_SHA:TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256:TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA:TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA:TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256:TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA:TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA:TLS_ECDHE_RSA_WITH_RC4_128_SHA
+
   nats.user:
     description:
   nats.password:
@@ -61,7 +78,7 @@ properties:
     default: 22
   request_timeout_in_seconds:
     description: "Timeout in seconds for Router -> Endpoint roundtrip."
-    default: 300
+    default: 900
   metron_endpoint.host:
     description: "The host used to emit messages to the Metron agent."
     default: "127.0.0.1"
@@ -85,3 +102,16 @@ properties:
   dropsonde.enabled:
     default: false
     description: "Enable the dropsonde emitter library"
+  
+  uaa.clients.gorouter.secret:
+    description: "Password for UAA client for the gorouter."
+  uaa.port:
+    description: "Port on which UAA is running."
+    default: 8080
+
+  routing-api.port:
+    description: "Port on which routing-api is running."
+    default: 3000
+  routing-api.enabled:
+    description: Determines whether or not the Routing Api is enabled
+    default: false
