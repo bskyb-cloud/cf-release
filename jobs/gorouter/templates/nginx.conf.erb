@@ -5,8 +5,6 @@ worker_rlimit_nofile 30000;
 error_log /var/vcap/sys/log/nginx_gorouter/nginx.error.log;
 pid       /var/vcap/sys/run/nginx_gorouter/nginx.pid;
 
-syslog local6 <%= p("router.nginx_syslog_name") %>;
-
 events {
     worker_connections  19000;
     use epoll;
