@@ -106,7 +106,6 @@ http {
                 proxy_buffer_size               8k;
                 proxy_buffers                   2048 8k;
                 proxy_set_header                Host $host;
-                proxy_set_header                X-Forwarded_For $proxy_add_x_forwarded_for;
                 proxy_set_header                Upgrade $http_upgrade;
                 proxy_set_header                Connection $http_connection;
                 # we may have to add all the e-tag headers here. Damn nginx.
