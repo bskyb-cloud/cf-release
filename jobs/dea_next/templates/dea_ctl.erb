@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-export PATH=/var/vcap/packages/ruby-2.1.6/bin:$PATH
+export PATH=/var/vcap/packages/ruby-2.1.7/bin:$PATH
 RUN_DIR=/var/vcap/sys/run/dea_next
 LOG_DIR=/var/vcap/sys/log/dea_next
 PIDFILE=$RUN_DIR/dea_next.pid
@@ -30,6 +30,7 @@ case $1 in
     echo /var/vcap/sys/cores/core-%e-%s-%p-%t > /proc/sys/kernel/core_pattern
 
     ulimit -c unlimited
+    ulimit -n 4096
 
     <% if p("dea_next.kernel_network_tuning_enabled") == true %>
     # TCP_FIN_TIMEOUT
@@ -46,16 +47,21 @@ case $1 in
     # incorrectly states the default as enabled. It can be changed to 1 (enabled) in many cases. Known to cause some
     # issues with hoststated (load balancing and fail over) if enabled, should be used with caution.
 
-    echo 1 > /proc/sys/net/ipv4/tcp_tw_recycle
+    echo 0 > /proc/sys/net/ipv4/tcp_tw_recycle
 
     # TCP_TW_REUSE
     # This allows reusing sockets in TIME_WAIT state for new connections when it is safe from protocol viewpoint.
     # Default value is 0 (disabled). It is generally a safer alternative to tcp_tw_recycle
 
     echo 1 > /proc/sys/net/ipv4/tcp_tw_reuse
+
+    # NF_CONNTRACK_MAX
+    # Default value is 65536. We set it to a larger number to avoid running out of connections.
+
+    echo 262144 > /proc/sys/net/netfilter/nf_conntrack_max
     <% end %>
 
-    exec /var/vcap/packages/ruby-2.1.6/bin/ruby /var/vcap/packages/dea_next/bin/dea \
+    exec /var/vcap/packages/ruby-2.1.7/bin/ruby /var/vcap/packages/dea_next/bin/dea \
          $JOB_DIR/config/dea.yml
 
     ;;

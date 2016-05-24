@@ -10,7 +10,7 @@ templates:
 packages:
 - common
 - collector
-- ruby-2.1.6
+- ruby-2.1.7
 
 properties:
   collector.aws.access_key_id:
@@ -64,6 +64,9 @@ properties:
     description: "IP address of Graphite"
   collector.graphite.port:
     description: "TCP port of Graphite"
+  collector.memory_threshold:
+    description: "Memory threshold for collector restart (Mb)"
+    default: 800
   nats.machines:
     description: "IP of each NATS cluster member."
   nats.password:
@@ -72,5 +75,3 @@ properties:
     description: "NATS TCP port"
   nats.user:
     description: "NATS user"
-  networks.apps:
-    description: "Collector network information."

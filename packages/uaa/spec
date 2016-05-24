@@ -1,8 +1,9 @@
 ---
 name: uaa
 dependencies:
-- ruby-2.1.6
+- ruby-2.1.7
 files:
 - uaa/**/*
-- openjdk/**/*
-- cf-registrar-bundle-for-identity/**/*
+- openjdk/openjdk-1.8.0_60-x86_64-mountainlion.tar.gz
+- openjdk/openjdk-1.8.0_60-x86_64-trusty.tar.gz
+- openjdk/openjdk-1.8.0_60-x86_64-trusty-jre.tar.gz

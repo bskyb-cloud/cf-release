@@ -5,8 +5,10 @@ description: "The Postgres server provides a single instance Postgres database t
 
 templates:
   postgres_ctl.erb: bin/postgres_ctl
+  postgres_start.sh.erb: bin/postgres_start.sh
   postgresql.conf.erb: config/postgresql.conf
   pg_hba.conf.erb: config/pg_hba.conf
+
   postgres_backup.cron.erb: config/postgres_backup.cron
   postgres_backup.erb: bin/postgres_backup  
   pg_backup.sh.erb: bin/pg_backup.sh
@@ -15,6 +17,7 @@ templates:
 packages:
   - common
   - postgres
+  - postgres-9.4.2
 
 properties:
   databases.db_scheme:
@@ -32,6 +35,9 @@ properties:
   databases.log_line_prefix:
     description: "The postgres `printf` style string that is output at the beginning of each log line"
     default: "%m: "
+  databases.collect_statement_statistics:
+    description: "Enable the `pg_stat_statements` extension and collect statement execution statistics"
+    default: false
 
   databases.backup.enable:
     default: false

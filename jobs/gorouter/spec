@@ -50,15 +50,48 @@ properties:
   router.enable_ssl:
     description: "Enable ssl termination on the router"
     default: false
+  router.enable_routing_api:
+    description: "Enable the GoRouter to receive routes from the Routing API"
+    default: true
   router.ssl_cert:
     description: "The public ssl cert for ssl termination"
     default: ""
   router.ssl_key:
     description: "The private ssl key for ssl termination"
     default: ""
+  router.ssl_skip_validation:
+    description: "Skip SSL client cert validation"
+    default: false
   router.cipher_suites:
-    description: "Valid ssl cipher suites, golang tls constants separated by commas"
-    default: TLS_RSA_WITH_RC4_128_SHA:TLS_RSA_WITH_AES_128_CBC_SHA:TLS_RSA_WITH_AES_256_CBC_SHA:TLS_ECDHE_ECDSA_WITH_RC4_128_SHA:TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256:TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA:TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA:TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256:TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA:TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA:TLS_ECDHE_RSA_WITH_RC4_128_SHA
+    description:
+      An ordered list of supported SSL cipher suites containing golang tls constants separated by colons
+      The cipher suite will be chosen according to this order during SSL handshake
+      For example, TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA:TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA
+    default: ""
+  router.route_services_secret:
+    description: "Support for route services is disabled when no value is configured."
+    default: ""
+  router.route_services_secret_decrypt_only:
+    description: "To rotate keys, add your new key here and deploy. Then swap this key with the value of route_services_secret and deploy again."
+    default: ""
+  router.route_service_timeout:
+    description: "Expiry time of a route service signature in seconds"
+    default: 60
+  router.logrotate.freq_min:
+    description: "The frequency in minutes which logrotate will rotate VM logs"
+    default: 5
+  router.logrotate.rotate:
+    description: "The number of files that logrotate will keep around on the VM"
+    default: 7
+  router.logrotate.size:
+    description: "The size at which logrotate will decide to rotate the log file"
+    default: 2M
+  router.extra_headers_to_log:
+    description: "A list of headers that log events will be annotated with"
+    default: []
+  router.logging_level:
+    description: "Log level for router"
+    default: "info"
 
   nats.user:
     description:
@@ -88,17 +121,6 @@ properties:
   metron_endpoint.port:
     description: "The port used to emit legacy messages to the Metron agent."
     default: 3456
-  metron_endpoint.shared_secret:
-    description: "The key used to sign log messages."
-  networks.apps:
-    description: "GoRouter network information."
-  router.internal_only_patterns:
-    description: "patterns that are used against the host header to declare them as internal only"
-    default: []
-  router.extra_internal_ips:
-    description: "patterns used to identify non rfc-1918 ips"
-    default: []
-    
   dropsonde.enabled:
     default: false
     description: "Enable the dropsonde emitter library"
@@ -112,6 +134,6 @@ properties:
   routing-api.port:
     description: "Port on which routing-api is running."
     default: 3000
-  routing-api.enabled:
-    description: Determines whether or not the Routing Api is enabled
+  routing-api.auth_disabled:
+    description: "Disables UAA authentication"
     default: false

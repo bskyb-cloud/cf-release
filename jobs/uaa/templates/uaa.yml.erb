@@ -1,7 +1,7 @@
 ---
 <% uaa_db = properties.uaadb.databases.find { |db| db.tag == "uaa" } %>
 <% uaa_role = properties.uaadb.roles.find { |role| role.tag == "admin" } %>
-<% protocol = (properties.login && properties.login.protocol) ? properties.login.protocol : "http" %>
+<% protocol = properties.login.protocol %>
 
 <%
   # The login secret is defined in one of two properties
@@ -30,6 +30,7 @@ database:
   removeabandoned: <%= (properties.uaa.database && properties.uaa.database.remove_abandoned) ? true : false %>
   logabandoned: <%= (properties.uaa.database && properties.uaa.database.log_abandoned) ? true : false %>
   abandonedtimeout: <%= (properties.uaa.database && properties.uaa.database.abandoned_timeout) ? properties.uaa.database.abandoned_timeout : 300 %>
+  <%= (properties.uaa.database && !(properties.uaa.database.case_insensitive.nil?)) ? 'caseinsensitive: ' + properties.uaa.database.case_insensitive.to_s : '' %>
 
 <% if properties.uaa && properties.uaa.ldap && ((properties.uaa.ldap.enabled &&  (properties.uaa.ldap.enabled==true)) || (properties.uaa.spring_profiles && properties.uaa.spring_profiles.eql?('ldap'))) %>
 spring_profiles: <%= properties.uaadb.db_scheme %>,ldap
@@ -66,10 +67,34 @@ authentication:
     lockoutPeriodSeconds: <%= properties.uaa.authentication.policy.lockoutPeriodSeconds ? properties.uaa.authentication.policy.lockoutPeriodSeconds : 300%>
 <% end %>
 
+disableInternalAuth: <%= properties.uaa.disableInternalAuth %>
+
+disableInternalUserManagement: <%= properties.uaa.disableInternalUserManagement %>
+
+password:
+  policy:
+    minLength: <%= properties.uaa.password.policy.minLength %>
+    maxLength: <%= properties.uaa.password.policy.maxLength %>
+    requireUpperCaseCharacter: <%= properties.uaa.password.policy.requireUpperCaseCharacter %>
+    requireLowerCaseCharacter: <%= properties.uaa.password.policy.requireLowerCaseCharacter %>
+    requireDigit: <%= properties.uaa.password.policy.requireDigit %>
+    requireSpecialCharacter: <%= properties.uaa.password.policy.requireSpecialCharacter %>
+    expirePasswordInMonths: <%= properties.uaa.password.policy.expirePasswordInMonths %>
+    global:
+      minLength: <%= properties.uaa.password.policy.minLength %>
+      maxLength: <%= properties.uaa.password.policy.maxLength %>
+      requireUpperCaseCharacter: <%= properties.uaa.password.policy.requireUpperCaseCharacter %>
+      requireLowerCaseCharacter: <%= properties.uaa.password.policy.requireLowerCaseCharacter %>
+      requireDigit: <%= properties.uaa.password.policy.requireDigit %>
+      requireSpecialCharacter: <%= properties.uaa.password.policy.requireSpecialCharacter %>
+      expirePasswordInMonths: <%= properties.uaa.password.policy.expirePasswordInMonths %>
+
 <% scheme = p("uaa.no_ssl") ? "http" : "https" %>
 issuer.uri: <%= p("uaa.issuer", p("uaa.url", "#{scheme}://uaa.#{properties.domain}")) %>
 
 oauth:
+  id_token:
+    disable: <%= properties.uaa.id_token.disable %>
   <% unless properties.uaa.no_ssl %>
   authorize:
     ssl: true
@@ -111,7 +136,7 @@ oauth:
       id: cf
       override: true
       authorized-grant-types: implicit,password,refresh_token
-      scope: cloud_controller.read,cloud_controller.write,openid,password.write,cloud_controller.admin,scim.read,scim.write,doppler.firehose
+      scope: cloud_controller.read,cloud_controller.write,openid,password.write,cloud_controller.admin,scim.read,scim.write,doppler.firehose,uaa.user,routing.router_groups.read
       authorities: uaa.none
       access-token-validity: 600
       refresh-token-validity: 2592000
@@ -129,14 +154,21 @@ oauth:
   user:
     authorities: <% properties.uaa.user.authorities.each do |authority| %>
       - <%= authority %><% end %>
-  openid:
-    fallbackToAuthcode: <%= properties.uaa.openid.fallbackToAuthcode %>
 scim:
-  userids_enabled: <%= properties.uaa.scim && (!properties.uaa.scim.userids_enabled.nil?) ?  properties.uaa.scim.userids_enabled : false %>
-  user.override: <%= properties.uaa.scim && properties.uaa.scim.user && (!properties.uaa.scim.user.override.nil?) ? properties.uaa.scim.user.override : true %>
+  userids_enabled: <%= properties.uaa.scim.userids_enabled %>
+  user.override: <%= properties.uaa.scim.user.override %>
 <% if properties.uaa.scim && properties.uaa.scim.users then %>
   users: <% properties.uaa.scim.users.each do |user| %>
     - <%= user %><% end %>
+<% end %>
+
+<% if properties.uaa.scim && properties.uaa.scim.external_groups then %>
+  external_groups: <% properties.uaa.scim.external_groups.each do |group| %>
+    - <%= group %><% end %>
+<% end %>
+
+<% if_p('uaa.scim.groups') do |groups| %>
+  groups: <%= groups %>
 <% end %>
 
 <% if properties.uaa && properties.uaa.zones && properties.uaa.zones.internal &&  properties.uaa.zones.internal.hostnames then %>
@@ -146,10 +178,6 @@ zones:
       - <%= hostname %><% end %>
 <% end %>
 
-<% if properties.uaa.scim && properties.uaa.scim.external_groups then %>
-  external_groups: <% properties.uaa.scim.external_groups.each do |group| %>
-    - <%= group %><% end %>
-<% end %>
 <% if !properties.uaa.require_https.nil? %>
 require_https: <%= properties.uaa.require_https %>
 <% end %>
@@ -180,6 +208,12 @@ ldap:
     mailAttributeName: '<%= properties.uaa.ldap.mailAttributeName%>'
     mailSubstitute: '<%= properties.uaa.ldap.mailSubstitute %>'
     mailSubstituteOverridesLdap: <%= properties.uaa.ldap.mailSubstituteOverridesLdap %>
+  <% if properties.uaa.ldap.emailDomain %>
+  emailDomain: <% properties.uaa.ldap.emailDomain.each do |domain| %>
+  - <%= domain %><% end %><% end %>
+  <% if properties.uaa.ldap.attributeMappings %>
+  attributeMappings: <% properties.uaa.ldap.attributeMappings.marshal_dump.each do |key,val| %>
+    <%= key %>: <%= val %><% end %><% end %>
   <% if properties.uaa.ldap.sslCertificate %>
   ssl: 
     sslCertificate: ! <%= "'" + p("uaa.ldap.sslCertificate").gsub("\n", "\n\n    ") + "'" %>
@@ -223,6 +257,6 @@ ldap:
     <% if properties.login.ldap.sslCertificateAlias %>
     sslCertificateAlias: <%= properties.login.ldap.sslCertificateAlias %>
     <% end %>
-  <% end %>  
+  <% end %>
 <% end %>
 

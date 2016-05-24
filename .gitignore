@@ -10,7 +10,6 @@
 .final_builds/packages/**/*.tgz
 .gitreview
 .idea
-/Gemfile.lock
 blobs
 config/dev.yml
 config/private.yml
@@ -21,5 +20,6 @@ src_alt
 **/.DS_Store
 releases/**/*.tgz
 .DS_Store
-bosh-lite/manifests/*
+bosh-lite/deployments/*
 bosh-lite/tmp/*
+pkg

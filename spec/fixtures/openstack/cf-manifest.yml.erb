@@ -6,11 +6,11 @@ compilation:
   workers: 6
 director_uuid: DIRECTOR_UUID
 jobs:
-- instances: 0
+- instances: 1
   name: consul_z1
   networks:
   - name: cf1
-    static_ips: []
+    static_ips: [0.0.0.12]
   persistent_disk: 1024
   properties:
     consul:
@@ -18,7 +18,7 @@ jobs:
         mode: server
     metron_agent:
       zone: z1
-  resource_pool: medium_z1
+  resource_pool: small_z1
   templates:
   - name: consul_agent
     release: cf
@@ -39,7 +39,7 @@ jobs:
         mode: server
     metron_agent:
       zone: z2
-  resource_pool: medium_z2
+  resource_pool: small_z2
   templates:
   - name: consul_agent
     release: cf
@@ -65,11 +65,6 @@ jobs:
     metron_agent:
       zone: z1
     ha_proxy:
-      ssl_ciphers: null
-      ssl_pem: null
-      disable_http: false
-    networks:
-      apps: cf1
     router:
       servers:
         z1:
@@ -91,8 +86,6 @@ jobs:
     static_ips:
     - 0.0.0.2
   properties:
-    networks:
-      apps: cf1
     metron_agent:
       zone: z1
   resource_pool: medium_z1
@@ -110,8 +103,6 @@ jobs:
   - name: cf2
     static_ips: []
   properties:
-    networks:
-      apps: cf2
     metron_agent:
       zone: z2
   resource_pool: medium_z2
@@ -131,8 +122,6 @@ jobs:
     - 0.0.0.8
   persistent_disk: 10024
   properties:
-    networks:
-      apps: cf1
     metron_agent:
       zone: z1
   resource_pool: medium_z1
@@ -143,7 +132,8 @@ jobs:
     release: cf
   - name: metron_agent
     release: cf
-  update: {}
+  update:
+    max_in_flight: 1
 - instances: 0
   name: etcd_z2
   networks:
@@ -151,8 +141,6 @@ jobs:
     static_ips: []
   persistent_disk: 10024
   properties:
-    networks:
-      apps: cf2
     metron_agent:
       zone: z2
   resource_pool: medium_z2
@@ -163,14 +151,13 @@ jobs:
     release: cf
   - name: metron_agent
     release: cf
-  update: {}
+  update:
+    max_in_flight: 1
 - instances: 1
   name: stats_z1
   networks:
   - name: cf1
   properties:
-    networks:
-      apps: cf1
     metron_agent:
       zone: z1
   resource_pool: small_z1
@@ -187,8 +174,6 @@ jobs:
     static_ips:
     - 0.0.0.3
   properties:
-    networks:
-      apps: cf1
     metron_agent:
       zone: z1
   persistent_disk: 102400
@@ -206,8 +191,6 @@ jobs:
     static_ips:
     - 0.0.0.4
   properties:
-    networks:
-      apps: cf1
     metron_agent:
       zone: z1
   persistent_disk: 4096
@@ -226,11 +209,24 @@ jobs:
     consul:
       agent:
         services:
-        - uaa
-    networks:
-      apps: cf1
+          uaa: {}
     metron_agent:
       zone: z1
+    route_registrar:
+      routes:
+      - name: uaa
+        tags:
+          component: uaa
+        port: 8080
+        uris:
+        - "uaa.DOMAIN"
+        - "*.uaa.DOMAIN"
+        - "login.DOMAIN"
+        - "*.login.DOMAIN"
+    uaa:
+      proxy:
+        servers:
+          - 0.0.0.5
   resource_pool: medium_z1
   templates:
   - name: uaa
@@ -238,6 +234,10 @@ jobs:
   - name: metron_agent
     release: cf
   - name: consul_agent
+    release: cf
+  - name: route_registrar
+    release: cf
+  - name: statsd-injector
     release: cf
   update: {}
 - instances: 0
@@ -248,11 +248,24 @@ jobs:
     consul:
       agent:
         services:
-        - uaa
-    networks:
-      apps: cf2
+          uaa: {}
     metron_agent:
       zone: z2
+    route_registrar:
+      routes:
+      - name: uaa
+        tags:
+          component: uaa
+        port: 8080
+        uris:
+        - "uaa.DOMAIN"
+        - "*.uaa.DOMAIN"
+        - "login.DOMAIN"
+        - "*.login.DOMAIN"
+    uaa:
+      proxy:
+        servers:
+          - 0.0.0.5
   resource_pool: medium_z2
   templates:
   - name: uaa
@@ -261,37 +274,9 @@ jobs:
     release: cf
   - name: consul_agent
     release: cf
-  update: {}
-- instances: 0
-  name: login_z1
-  networks:
-  - name: cf1
-  properties:
-    networks:
-      apps: cf1
-    metron_agent:
-      zone: z1
-  resource_pool: medium_z1
-  templates:
-  - name: login
+  - name: route_registrar
     release: cf
-  - name: metron_agent
-    release: cf
-  update: {}
-- instances: 0
-  name: login_z2
-  networks:
-  - name: cf2
-  properties:
-    networks:
-      apps: cf2
-    metron_agent:
-      zone: z2
-  resource_pool: medium_z2
-  templates:
-  - name: login
-    release: cf
-  - name: metron_agent
+  - name: statsd-injector
     release: cf
   update: {}
 - instances: 1
@@ -303,26 +288,39 @@ jobs:
     consul:
       agent:
         services:
-        - cloud_controller_ng
+          cloud_controller_ng: {}
+          routing-api: {}
     metron_agent:
       zone: z1
-    networks:
-      apps: cf1
     nfs_server:
       address: 0.0.0.3
       allow_from_entries:
       - null
       - null
       share: null
+    route_registrar:
+      routes:
+      - name: api
+        port: 9022
+        tags:
+          component: CloudController
+        uris:
+        - "api.DOMAIN"
   resource_pool: large_z1
   templates:
   - name: cloud_controller_ng
     release: cf
+  - name: routing-api
+    release: cf
   - name: metron_agent
+    release: cf
+  - name: statsd-injector
+    release: cf
+  - name: consul_agent
     release: cf
   - name: nfs_mounter
     release: cf
-  - name: consul_agent
+  - name: route_registrar
     release: cf
   update: {}
 - instances: 0
@@ -334,26 +332,39 @@ jobs:
     consul:
       agent:
         services:
-        - cloud_controller_ng
+          cloud_controller_ng: {}
+          routing-api: {}
     metron_agent:
       zone: z2
-    networks:
-      apps: cf2
     nfs_server:
       address: 0.0.0.3
       allow_from_entries:
       - null
       - null
       share: null
+    route_registrar:
+      routes:
+      - name: api
+        port: 9022
+        tags:
+          component: CloudController
+        uris:
+        - "api.DOMAIN"
   resource_pool: large_z2
   templates:
   - name: cloud_controller_ng
     release: cf
+  - name: routing-api
+    release: cf
   - name: metron_agent
+    release: cf
+  - name: statsd-injector
+    release: cf
+  - name: consul_agent
     release: cf
   - name: nfs_mounter
     release: cf
-  - name: consul_agent
+  - name: route_registrar
     release: cf
   update: {}
 - instances: 1
@@ -364,8 +375,6 @@ jobs:
   properties:
     metron_agent:
       zone: z1
-    networks:
-      apps: cf1
   resource_pool: medium_z1
   templates:
   - name: cloud_controller_clock
@@ -381,8 +390,6 @@ jobs:
   properties:
     metron_agent:
       zone: z1
-    networks:
-      apps: cf1
     nfs_server:
       address: 0.0.0.3
       allow_from_entries:
@@ -395,9 +402,9 @@ jobs:
     release: cf
   - name: metron_agent
     release: cf
-  - name: nfs_mounter
-    release: cf
   - name: consul_agent
+    release: cf
+  - name: nfs_mounter
     release: cf
   update: {}
 - instances: 0
@@ -408,8 +415,6 @@ jobs:
   properties:
     metron_agent:
       zone: z2
-    networks:
-      apps: cf2
     nfs_server:
       address: 0.0.0.3
       allow_from_entries:
@@ -422,9 +427,9 @@ jobs:
     release: cf
   - name: metron_agent
     release: cf
-  - name: nfs_mounter
-    release: cf
   - name: consul_agent
+    release: cf
+  - name: nfs_mounter
     release: cf
   update: {}
 - instances: 1
@@ -432,15 +437,23 @@ jobs:
   networks:
   - name: cf1
   properties:
-    networks:
-      apps: cf1
     metron_agent:
       zone: z1
+    route_registrar:
+      routes:
+      - name: hm9000
+        port: 5155
+        tags:
+          component: HM9K
+        uris:
+        - "hm9000.DOMAIN"
   resource_pool: medium_z1
   templates:
   - name: hm9000
     release: cf
   - name: metron_agent
+    release: cf
+  - name: route_registrar
     release: cf
   update: {}
 - instances: 0
@@ -448,15 +461,23 @@ jobs:
   networks:
   - name: cf2
   properties:
-    networks:
-      apps: cf2
     metron_agent:
       zone: z2
+    route_registrar:
+      routes:
+      - name: hm9000
+        port: 5155
+        tags:
+          component: HM9K
+        uris:
+        - "hm9000.DOMAIN"
   resource_pool: medium_z2
   templates:
   - name: hm9000
     release: cf
   - name: metron_agent
+    release: cf
+  - name: route_registrar
     release: cf
   update: {}
 - instances: 1
@@ -469,8 +490,6 @@ jobs:
       zone: z1
     metron_agent:
       zone: z1
-    networks:
-      apps: cf1
   resource_pool: runner_z1
   templates:
   - name: dea_next
@@ -491,8 +510,6 @@ jobs:
       zone: z2
     metron_agent:
       zone: z2
-    networks:
-      apps: cf2
   resource_pool: runner_z2
   templates:
   - name: dea_next
@@ -503,14 +520,12 @@ jobs:
     release: cf
   update:
     max_in_flight: 1
-- instances: 1
+- instances: 0
   name: loggregator_z1
   networks:
   - name: cf1
   properties:
 <%= loggregator_z1_properties %>
-    networks:
-      apps: cf1
   resource_pool: medium_z1
   templates:
 <%= loggregator_templates %>
@@ -521,8 +536,26 @@ jobs:
   - name: cf2
   properties:
 <%= loggregator_z2_properties %>
-    networks:
-      apps: cf2
+  resource_pool: medium_z2
+  templates:
+<%= loggregator_templates %>
+  update: {}
+- instances: 1
+  name: doppler_z1
+  networks:
+  - name: cf1
+  properties:
+<%= loggregator_z1_properties %>
+  resource_pool: medium_z1
+  templates:
+<%= loggregator_templates %>
+  update: {}
+- instances: 0
+  name: doppler_z2
+  networks:
+  - name: cf2
+  properties:
+<%= loggregator_z2_properties %>
   resource_pool: medium_z2
   templates:
 <%= loggregator_templates %>
@@ -533,8 +566,6 @@ jobs:
   - name: cf1
   properties:
 <%= loggregator_trafficcontroller_z1_properties %>
-    networks:
-      apps: cf1
   resource_pool: small_z1
   templates:
 <%= loggregator_trafficcontroller_templates %>
@@ -545,14 +576,15 @@ jobs:
   - name: cf2
   properties:
 <%= loggregator_trafficcontroller_z2_properties %>
-    networks:
-      apps: cf2
   resource_pool: small_z2
   templates:
 <%= loggregator_trafficcontroller_templates %>
   update: {}
 - instances: 1
   name: router_z1
+  default_networks:
+    - name: cf1
+      static_ips: ~
   networks:
   - name: cf1
     static_ips:
@@ -561,11 +593,9 @@ jobs:
     consul:
       agent:
         services:
-        - gorouter
+          gorouter: {}
     metron_agent:
       zone: z1
-    networks:
-      apps: cf1
   resource_pool: router_z1
   templates:
   - name: gorouter
@@ -577,6 +607,9 @@ jobs:
   update: {}
 - instances: 0
   name: router_z2
+  default_networks:
+    - name: cf2
+      static_ips: ~
   networks:
   - name: cf2
     static_ips: []
@@ -584,11 +617,9 @@ jobs:
     consul:
       agent:
         services:
-        - gorouter
+          gorouter: {}
     metron_agent:
       zone: z2
-    networks:
-      apps: cf2
   resource_pool: router_z2
   templates:
   - name: gorouter
@@ -598,53 +629,7 @@ jobs:
   - name: consul_agent
     release: cf
   update: {}
-- instances: 0
-  name: routing_api_z1
-  networks:
-  - name: cf1
-    static_ips: []
-  properties:
-    consul:
-      agent:
-        services:
-        - routing-api
-    metron_agent:
-      zone: z1
-    networks:
-      apps: cf1
-  resource_pool: medium_z1
-  templates:
-  - name: routing-api
-    release: cf
-  - name: metron_agent
-    release: cf
-  - name: consul_agent
-    release: cf
-  update: {}
-- instances: 0
-  name: routing_api_z2
-  networks:
-  - name: cf2
-    static_ips: []
-  properties:
-    consul:
-      agent:
-        services:
-        - routing-api
-    metron_agent:
-      zone: z2
-    networks:
-      apps: cf2
-  resource_pool: medium_z2
-  templates:
-  - name: routing-api
-    release: cf
-  - name: metron_agent
-    release: cf
-  - name: consul_agent
-    release: cf
-  update: {}
-- instances: 0
+- instances: 1
   lifecycle: errand
   name: acceptance_tests
   networks:
@@ -658,9 +643,7 @@ jobs:
   name: smoke_tests
   networks:
   - name: cf1
-  properties:
-    networks:
-      apps: cf1
+  properties: {}
   resource_pool: small_errand
   templates:
   - name: smoke-tests
@@ -670,12 +653,6 @@ meta:
   releases:
   - name: cf
     version: latest
-  stemcell:
-    name: bosh-openstack-kvm-ubuntu-lucid-go_agent
-    version: latest
-  default_env:
-    bosh:
-      password: $6$4gDD3aV0rdqlrKC$2axHCxGKIObs6tAmMTqYCspcdvQXh3JJcvWOY2WGb4SrdXtnCyNaWlrf3WEqvYR2MYizEGp3kMmbpwBC6jsHt0
 name: null
 networks:
 - name: cf1
@@ -687,7 +664,7 @@ properties:
   acceptance_tests: null
   app_ssh: null
   app_domains:
-  - example.com
+  - DOMAIN
   cc:
     allowed_cors_domains: []
     app_events:
@@ -696,10 +673,9 @@ properties:
       cutoff_age_in_days: 31
     audit_events:
       cutoff_age_in_days: 31
-    billing_event_writing_enabled: false
     broker_client_timeout_seconds: 70
-    broker_client_default_async_poll_interval_seconds: 60
-    broker_client_max_async_poll_duration_minutes: 10080
+    broker_client_default_async_poll_interval_seconds: null
+    broker_client_max_async_poll_duration_minutes: null
     buildpacks:
       buildpack_directory_key: bd_key
       cdn: null
@@ -709,11 +685,13 @@ properties:
     internal_api_password: password
     logging_level: debug2
     db_logging_level: debug2
-    client_max_body_size: 1536M
+    client_max_body_size: 15M
     db_encryption_key: the_key
     default_app_disk_in_mb: 1024
     default_app_memory: 1024
     default_buildpacks:
+    - name: staticfile_buildpack
+      package: buildpack_staticfile
     - name: java_buildpack
       package: buildpack_java
     - name: ruby_buildpack
@@ -726,8 +704,6 @@ properties:
       package: buildpack_python
     - name: php_buildpack
       package: buildpack_php
-    - name: staticfile_buildpack
-      package: buildpack_staticfile
     - name: binary_buildpack
       package: buildpack_binary
     default_health_check_timeout: 60
@@ -740,7 +716,6 @@ properties:
     - dns
     default_to_diego_backend: false
     development_mode: false
-    diego_docker: false
     allow_app_ssh_access: true
     directories: null
     disable_custom_buildpacks: false
@@ -748,9 +723,13 @@ properties:
       cdn: null
       droplet_directory_key: the_key
       fog_connection: null
+      max_staged_droplets_stored: null
     external_host: api
-    external_protocol: http
+    external_port: 9022
+    external_protocol: null
     install_buildpacks:
+    - name: staticfile_buildpack
+      package: buildpack_staticfile
     - name: java_buildpack
       package: buildpack_java
     - name: ruby_buildpack
@@ -763,8 +742,6 @@ properties:
       package: buildpack_python
     - name: php_buildpack
       package: buildpack_php
-    - name: staticfile_buildpack
-      package: buildpack_staticfile
     - name: binary_buildpack
       package: buildpack_binary
     jobs:
@@ -802,10 +779,11 @@ properties:
         enabled: true
         record_sql: obfuscated
     packages:
-      app_package_directory_key: example.com-cc-packages
+      app_package_directory_key: DOMAIN-cc-packages
       cdn: null
       fog_connection: null
       max_package_size: 1073741824
+      max_valid_packages_stored: null
     quota_definitions:
       default:
         memory_limit: 10240
@@ -815,7 +793,7 @@ properties:
     resource_pool:
       cdn: null
       fog_connection: null
-      resource_directory_key: example.com-cc-resources
+      resource_directory_key: DOMAIN-cc-resources
     security_group_definitions:
     - name: public_networks
       rules:
@@ -837,11 +815,13 @@ properties:
       - destination: 0.0.0.0/0
         ports: "53"
         protocol: udp
-    srv_api_uri: https://api.example.com
+    srv_api_uri: https://api.DOMAIN
     stacks: null
     staging_upload_password: password
     staging_upload_user: username
     system_buildpacks:
+    - name: staticfile_buildpack
+      package: buildpack_staticfile
     - name: java_buildpack
       package: buildpack_java
     - name: ruby_buildpack
@@ -854,8 +834,6 @@ properties:
       package: buildpack_python
     - name: php_buildpack
       package: buildpack_php
-    - name: staticfile_buildpack
-      package: buildpack_staticfile
     - name: binary_buildpack
       package: buildpack_binary
     thresholds:
@@ -870,7 +848,7 @@ properties:
     user_buildpacks: []
     users_can_select_backend: true
   hm9000:
-    url: https://hm9000.example.com
+    url: https://hm9000.DOMAIN
   ccdb:
     address: 0.0.0.4
     databases:
@@ -885,8 +863,16 @@ properties:
   collector: null
   consul:
     agent:
+      log_level: null
       servers:
-        lan: []
+        lan: [0.0.0.12]
+    ca_cert:
+    agent_cert:
+    agent_key:
+    encrypt_keys: []
+    require_ssl:
+    server_cert:
+    server_key:
   databases:
     address: 0.0.0.4
     databases:
@@ -897,6 +883,7 @@ properties:
       name: uaadb
       tag: uaa
     db_scheme: postgres
+    collect_statement_statistics: null
     port: 5524
     roles:
     - name: ccadmin
@@ -913,26 +900,31 @@ properties:
     deny_networks: null
     directory_server_protocol: https
     disk_mb: 2048
-    disk_overcommit_factor: 2
+    disk_overcommit_factor: null
     evacuation_bail_out_time_in_seconds: 600
     heartbeat_interval_in_seconds: 10
     instance_disk_inode_limit: 200000
     kernel_network_tuning_enabled: true
     logging_level: debug
     memory_mb: 1024
-    memory_overcommit_factor: 3
+    memory_overcommit_factor: null
+    mtu: ~
     staging_disk_inode_limit: 200000
     staging_disk_limit_mb: 6144
     staging_memory_limit_mb: 1024
     rlimit_core: 0
-  description: Cloud Foundry sponsored by Pivotal
+    instance_bandwidth_limit: null
+    staging_bandwidth_limit: null
+  description: null
   disk_quota_enabled: true
-  domain: example.com
+  domain: DOMAIN
   doppler_endpoint:
     shared_secret: loggregator_endpoint_secret
   dropsonde:
     enabled: true
   etcd:
+    require_ssl: false
+    peer_require_ssl: false
     machines:
     - 0.0.0.8
   etcd_metrics_server:
@@ -941,6 +933,7 @@ properties:
       - 0.0.0.2
       password: nats_password
       username: nats_user
+  ha_proxy: null
   logger_endpoint:
     port: 4443
 <%= lamb_properties("null") %>
@@ -953,21 +946,18 @@ properties:
       domain: null
     asset_base_url: null
     brand: oss
-    catalina_opts: -Xmx768m -XX:MaxPermSize=256m
+    catalina_opts: null
     invitations_enabled: null
     links:
-      home: https://console.example.com
-      network: null
-      passwd: https://console.example.com/password_resets/new
-      signup: https://console.example.com/register
-      signup-network: null
+      passwd: https://console.DOMAIN/password_resets/new
+      signup: https://console.DOMAIN/register
     logout:
       redirect:
         url: "/login?template=openstack"
     notifications:
       url: null
-    protocol: https
-    restricted_ips_regex: 10\.\d{1,3}\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|169\.254\.\d{1,3}\.\d{1,3}|127\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.1[6-9]{1}\.\d{1,3}\.\d{1,3}|172\.2[0-9]{1}\.\d{1,3}\.\d{1,3}|172\.3[0-1]{1}\.\d{1,3}\.\d{1,3}
+    protocol: null
+    restricted_ips_regex: ~
     saml: null
     self_service_links_enabled: null
     signups_enabled: null
@@ -979,7 +969,6 @@ properties:
     spring_profiles: null
     tiles: null
     uaa_base: null
-    uaa_certificate: null
     url: null
     messages: null
   metron_endpoint:
@@ -1003,7 +992,12 @@ properties:
     share: null
   request_timeout_in_seconds: 900
   router:
+    logrotate:
+      freq_min: 20
+      rotate: 5
+      size: 3M
     enable_ssl: true
+    extra_headers_to_log: null
     ssl_cert: |
       -----BEGIN CERTIFICATE-----
       MIIDBjCCAe4CCQCz3nn1SWrDdTANBgkqhkiG9w0BAQUFADBFMQswCQYDVQQGEwJB
@@ -1053,17 +1047,24 @@ properties:
       SOWIahDrATA4g1T6yLBWQPhj3ZXD3eCMxT1Q3DvpG1DjgvXwmXQJAA==
       -----END RSA PRIVATE KEY-----
     cipher_suites: TLS_RSA_WITH_RC4_128_SHA:TLS_RSA_WITH_AES_128_CBC_SHA
-    requested_route_registration_interval_in_seconds: 20
+    ssl_skip_validation: null
+    requested_route_registration_interval_in_seconds: null
+    port: null
     status:
       password: router_password
       user: router_user
-    secure_cookies: true
+      port: null
+    secure_cookies: null
+    route_service_timeout: null
+    route_services_secret: null
+    route_services_secret_decrypt_only: null
+    debug_addr: null
   smoke_tests: null
   ssl:
     skip_cert_verify: false
   support_address: http://support.cloudfoundry.com
   syslog_daemon_config: null
-  system_domain: example.com
+  system_domain: DOMAIN
   system_domain_organization: null
   uaa:
     admin:
@@ -1073,9 +1074,6 @@ properties:
         countFailuresWithinSeconds: null
         lockoutAfterFailures: null
         lockoutPeriodSeconds: null
-    batch:
-      password: batch_password
-      username: batch_username
     catalina_opts: -Xmx768m -XX:MaxPermSize=256m
     cc:
       client_secret: cc_client_secret
@@ -1090,7 +1088,7 @@ properties:
         authorities: oauth.login,scim.write,clients.read,notifications.write,critical_notifications.write,emails.write,scim.userids,password.write
         authorized-grant-types: authorization_code,client_credentials,refresh_token
         override: true
-        redirect-uri: https://login.example.com
+        redirect-uri: https://login.DOMAIN
         scope: openid,oauth.approvals
         secret: login_client_secret
       notifications:
@@ -1105,8 +1103,12 @@ properties:
         authorities: scim.userids
         secret: cloud_controller_username_lookup_secret
         authorized-grant-types: client_credentials
+      cc_routing:
+        authorities: routing.router_groups.read
+        secret: cc_routing_secret
+        authorized-grant-types: client_credentials
       gorouter:
-        authorities: clients.read,clients.write,clients.admin,route.admin,route.advertise
+        authorities: clients.read,clients.write,clients.admin,routing.routes.write,routing.routes.read
         authorized-grant-types: client_credentials,refresh_token
         scope: openid,cloud_controller_service_permissions.read
         secret: gorouter_secret
@@ -1117,22 +1119,25 @@ properties:
       abandoned_timeout: 600
       log_abandoned: true
 
-    issuer: https://uaa.example.com
+    issuer: https://uaa.DOMAIN
     jwt:
       signing_key: sk
       verification_key: vk
     ldap: null
     login: null
     newrelic: null
-    no_ssl: false
+    no_ssl: null
+    port: 8080
+    require_https: ~
     restricted_ips_regex: 10\.\d{1,3}\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|169\.254\.\d{1,3}\.\d{1,3}|127\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.1[6-9]{1}\.\d{1,3}\.\d{1,3}|172\.2[0-9]{1}\.\d{1,3}\.\d{1,3}|172\.3[0-1]{1}\.\d{1,3}\.\d{1,3}
     scim:
       external_groups: null
       userids_enabled: true
       users:
       - admin|fakepassword|scim.write,scim.read,openid,cloud_controller.admin,doppler.firehose
+      groups: additionalgroup1,additionalgroup2
     spring_profiles: null
-    url: https://uaa.example.com
+    url: https://uaa.DOMAIN
     user: null
     zones:
   uaadb:
@@ -1155,7 +1160,7 @@ resource_pools:
   name: small_z1
   network: cf1
   stemcell:
-    name: bosh-openstack-kvm-ubuntu-lucid-go_agent
+    name: bosh-openstack-kvm-ubuntu-trusty-go_agent
     version: latest
   env:
     bosh:
@@ -1165,7 +1170,7 @@ resource_pools:
   name: small_z2
   network: cf2
   stemcell:
-    name: bosh-openstack-kvm-ubuntu-lucid-go_agent
+    name: bosh-openstack-kvm-ubuntu-trusty-go_agent
     version: latest
   env:
     bosh:
@@ -1175,7 +1180,7 @@ resource_pools:
   name: medium_z1
   network: cf1
   stemcell:
-    name: bosh-openstack-kvm-ubuntu-lucid-go_agent
+    name: bosh-openstack-kvm-ubuntu-trusty-go_agent
     version: latest
   env:
     bosh:
@@ -1185,7 +1190,7 @@ resource_pools:
   name: medium_z2
   network: cf2
   stemcell:
-    name: bosh-openstack-kvm-ubuntu-lucid-go_agent
+    name: bosh-openstack-kvm-ubuntu-trusty-go_agent
     version: latest
   env:
     bosh:
@@ -1195,7 +1200,7 @@ resource_pools:
   name: large_z1
   network: cf1
   stemcell:
-    name: bosh-openstack-kvm-ubuntu-lucid-go_agent
+    name: bosh-openstack-kvm-ubuntu-trusty-go_agent
     version: latest
   env:
     bosh:
@@ -1205,7 +1210,7 @@ resource_pools:
   name: large_z2
   network: cf2
   stemcell:
-    name: bosh-openstack-kvm-ubuntu-lucid-go_agent
+    name: bosh-openstack-kvm-ubuntu-trusty-go_agent
     version: latest
   env:
     bosh:
@@ -1215,7 +1220,7 @@ resource_pools:
   name: runner_z1
   network: cf1
   stemcell:
-    name: bosh-openstack-kvm-ubuntu-lucid-go_agent
+    name: bosh-openstack-kvm-ubuntu-trusty-go_agent
     version: latest
   env:
     bosh:
@@ -1225,7 +1230,7 @@ resource_pools:
   name: runner_z2
   network: cf2
   stemcell:
-    name: bosh-openstack-kvm-ubuntu-lucid-go_agent
+    name: bosh-openstack-kvm-ubuntu-trusty-go_agent
     version: latest
   env:
     bosh:
@@ -1235,7 +1240,7 @@ resource_pools:
   name: router_z1
   network: cf1
   stemcell:
-    name: bosh-openstack-kvm-ubuntu-lucid-go_agent
+    name: bosh-openstack-kvm-ubuntu-trusty-go_agent
     version: latest
   env:
     bosh:
@@ -1245,7 +1250,7 @@ resource_pools:
   name: router_z2
   network: cf2
   stemcell:
-    name: bosh-openstack-kvm-ubuntu-lucid-go_agent
+    name: bosh-openstack-kvm-ubuntu-trusty-go_agent
     version: latest
   env:
     bosh:
@@ -1255,7 +1260,7 @@ resource_pools:
   name: small_errand
   network: cf1
   stemcell:
-    name: bosh-openstack-kvm-ubuntu-lucid-go_agent
+    name: bosh-openstack-kvm-ubuntu-trusty-go_agent
     version: latest
   env:
     bosh:
@@ -1265,7 +1270,7 @@ resource_pools:
   name: xlarge_errand
   network: cf1
   stemcell:
-    name: bosh-openstack-kvm-ubuntu-lucid-go_agent
+    name: bosh-openstack-kvm-ubuntu-trusty-go_agent
     version: latest
   env:
     bosh:

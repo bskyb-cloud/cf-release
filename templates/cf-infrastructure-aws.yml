@@ -9,7 +9,9 @@ meta:
     aws_secret_access_key: (( properties.template_only.aws.secret_access_key ))
     region: us-east-1
 
-  stemcell:
+  stemcell: (( merge || .meta.default_stemcell ))
+
+  default_stemcell:
     name: bosh-aws-xen-hvm-ubuntu-trusty-go_agent
     version: latest
 
@@ -39,9 +41,6 @@ properties:
   uaa:
     catalina_opts: -Xmx768m -XX:MaxPermSize=256m
 
-  login:
-    catalina_opts: -Xmx768m -XX:MaxPermSize=256m
-
   dea_next:
     deny_networks:
       - 169.254.0.0/16 # AWS Status
@@ -60,7 +59,7 @@ networks: (( merge ))
 resource_pools:
   - name: small_z1
     cloud_properties:
-      instance_type: c3.large
+      instance_type: m3.medium
       ephemeral_disk:
         size: 10_240
         type: gp2
@@ -68,7 +67,7 @@ resource_pools:
 
   - name: small_z2
     cloud_properties:
-      instance_type: c3.large
+      instance_type: m3.medium
       ephemeral_disk:
         size: 10_240
         type: gp2
@@ -76,7 +75,7 @@ resource_pools:
 
   - name: medium_z1
     cloud_properties:
-      instance_type: c3.large
+      instance_type: m3.medium
       ephemeral_disk:
         size: 10_240
         type: gp2
@@ -84,7 +83,7 @@ resource_pools:
 
   - name: medium_z2
     cloud_properties:
-      instance_type: c3.large
+      instance_type: m3.medium
       ephemeral_disk:
         size: 10_240
         type: gp2
@@ -92,7 +91,7 @@ resource_pools:
 
   - name: large_z1
     cloud_properties:
-      instance_type: m3.large
+      instance_type: m3.medium
       ephemeral_disk:
         size: 65_536
         type: gp2
@@ -100,7 +99,7 @@ resource_pools:
 
   - name: large_z2
     cloud_properties:
-      instance_type: m3.large
+      instance_type: m3.medium
       ephemeral_disk:
         size: 65_536
         type: gp2
@@ -142,7 +141,7 @@ resource_pools:
 
   - name: small_errand
     cloud_properties:
-      instance_type: c3.large
+      instance_type: m3.medium
       ephemeral_disk:
         size: 10_240
         type: gp2
@@ -155,18 +154,6 @@ resource_pools:
 
 # set up static IPs
 jobs:
-  - name: logs_z1
-    instances: 0
-    networks:
-      - name: cf1
-        static_ips: (( static_ips(0) ))
-
-  - name: logs_z2
-    instances: 0
-    networks:
-      - name: cf2
-        static_ips: (( static_ips(0) ))
-
   - name: nats_z1
     instances: 1
     networks:
@@ -191,24 +178,22 @@ jobs:
       - name: cf2
         static_ips: (( static_ips(5, 6, 15, 16, 17, 18, 19, 20) ))
 
-  - name: routing_api_z1
-    instances: 0
-    networks:
-      - name: cf1
-        static_ips: (( static_ips(26) ))
-
-  - name: routing_api_z2
-    instances: 0
-    networks:
-      - name: cf2
-        static_ips: (( static_ips(26) ))
-
   - name: loggregator_z1
-    instances: 1
+    instances: 0
     networks:
       - name: cf1
 
   - name: loggregator_z2
+    instances: 0
+    networks:
+      - name: cf2
+
+  - name: doppler_z1
+    instances: 1
+    networks:
+      - name: cf1
+
+  - name: doppler_z2
     instances: 1
     networks:
       - name: cf2
@@ -224,13 +209,13 @@ jobs:
       - name: cf2
 
   - name: consul_z1
-    instances: 0
+    instances: 2
     networks:
       - name: cf1
         static_ips: (( static_ips(27, 28, 29) ))
 
   - name: consul_z2
-    instances: 0
+    instances: 1
     networks:
       - name: cf2
         static_ips: (( static_ips(27, 28, 29) ))
@@ -246,9 +231,6 @@ jobs:
     networks:
       - name: cf2
         static_ips: (( static_ips(9) ))
-
-  - name: acceptance_tests
-    instances: 1
 
   - name: smoke_tests
     instances: 1

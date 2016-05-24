@@ -5,11 +5,9 @@ description: "The UAA is the identity management service for Cloud Foundry. It's
 
 templates:
   uaa_ctl.erb: bin/uaa_ctl
-  cf-registrar_ctl: bin/uaa_cf-registrar_ctl
   install_crt.erb: bin/install_crt
   dns_health_check.erb: bin/dns_health_check
 
-  cf-registrar.config.yml.erb: config/cf-registrar/config.yml
   uaa.yml.erb: config/uaa.yml
   newrelic.yml.erb: config/newrelic.yml
   varz.yml.erb: config/varz.yml
@@ -24,7 +22,7 @@ templates:
 
 packages:
   - common
-  - ruby-2.1.6
+  - ruby-2.1.7
   - uaa
 
 properties:
@@ -36,6 +34,33 @@ properties:
     description: "Number of seconds in which lockoutAfterFailures failures must occur in order for account to be locked"
   uaa.authentication.policy.lockoutPeriodSeconds:
     description: "Number of seconds to lock out an account when lockoutAfterFailures failures is exceeded"
+  uaa.disableInternalAuth:
+    description: "Disables internal user authentication"
+    default: false
+  uaa.disableInternalUserManagement:
+    description: "Disables UI and API for internal user management"
+    default: false
+  uaa.password.policy.minLength:
+    description: "Minimum number of characters required for password to be considered valid"
+    default: 0
+  uaa.password.policy.maxLength:
+    description: "Maximum number of characters required for password to be considered valid"
+    default: 255
+  uaa.password.policy.requireUpperCaseCharacter:
+    description: "Minimum number of uppercase characters required for password to be considered valid"
+    default: 0
+  uaa.password.policy.requireLowerCaseCharacter:
+    description: "Minimum number of lowercase characters required for password to be considered valid"
+    default: 0
+  uaa.password.policy.requireDigit:
+    description: "Minimum number of digits required for password to be considered valid"
+    default: 0
+  uaa.password.policy.requireSpecialCharacter:
+    description: "Minimum number of special characters required for password to be considered valid"
+    default: 0
+  uaa.password.policy.expirePasswordInMonths:
+    description: "Number of months after which current password expires"
+    default: 0
   uaa.catalina_opts:
     description:
     default: -Xmx768m -XX:MaxPermSize=256m
@@ -59,9 +84,9 @@ properties:
       - oauth.approvals
       - notification_preferences.read
       - notification_preferences.write
-  uaa.openid.fallbackToAuthcode:
-    description: When using the hybrid flow to get a id_token, suppress the exception if the client doesn't have the implicit grant.
-    default: true
+      - profile
+      - roles
+      - user_attributes
   uaa.clients:
     description:
   uaa.jwt.signing_key:
@@ -75,13 +100,16 @@ properties:
     description:
   uaa.scim.user.override:
     description:
+    default: true
   uaa.scim.userids_enabled:
     description:
-    default: false
+    default: true
   uaa.scim.users:
     description:
   uaa.scim.external_groups:
     description: "A list of external group mappings. Pipe delimited. A value may look as '- internal.read|cn=developers,ou=scopes,dc=test,dc=com'"
+  uaa.scim.groups:
+    description: Comma separated list of groups that should be added to the UAA db, but not assigned to a user by default.
   domain:
     description: "The domain name for this CloudFoundry deploy"
   env.http_proxy:
@@ -98,8 +126,6 @@ properties:
     description: "User name for NATS login"
   nats.machines:
     description: "IP of each NATS cluster member."
-  networks.apps:
-    description: "The App network name"
   uaadb.address:
     description: "The UAA database IP address"
   uaadb.databases:
@@ -125,6 +151,8 @@ properties:
   uaa.database.log_abandoned:
     description: "Should connections that are forcibly closed be logged."
     default: true
+  uaa.database.case_insensitive:
+    description: "Set to true if you don't want to be using LOWER() SQL functions in search queries/filters, because you know that your DB is case insensitive. If this property is null, then it will be set to true if the UAA DB is MySQL and false otherwise, but even on MySQL you can override it by setting it explicitly to false"
   uaa.no_ssl:
     description: "when true, uaa uses http, otherwise it uses https"
     default: false
@@ -207,6 +235,10 @@ properties:
   uaa.ldap.groups.maxSearchDepth:
     description: "Set to number of levels a nested group search should go. Set to 1 to disable nested groups (default)"
     default: "1"
+  uaa.ldap.emailDomain:
+    description: "Sets the whitelist of emails domains that the LDAP identity provider handles"
+  uaa.ldap.attributeMappings:
+    description: "Specifies how UAA user attributes map to LDAP attributes"
   uaa.zones.internal.hostnames:
     description: |
       A list of hostnames that are routed to the UAA, specifically the default zone in the UAA. The UAA will reject any Host headers that it doesn't recognize.
@@ -224,7 +256,7 @@ properties:
               - hostname2.localhost
               - hostname3.example.com
     default:
-      - uaa.service.consul
+      - uaa.service.cf.internal
   uaa.newrelic:
     description: |
       To enable newrelic monitoring, the sub element of this property will be placed in
@@ -233,8 +265,18 @@ properties:
       The JVM option -javaagent:/path/to/newrelic.jar will be added to Apache Tomcat's startup script
       The enablement of the NewRelic agent in the UAA is triggered by the property uaa.newrelic.common.license_key
       The property uaa.newrelic.common.license_key must be set!
+  uaa.logging_level:
+    description: Set UAA logging level.  (e.g. TRACE, DEBUG, INFO)
+    default: DEBUG
+  uaa.logging_use_rfc3339:
+    description: Sets the time format for log messages to be rfc3339 compatible.
+    default: false
+  uaa.id_token.disable:
+    description: When set to true, requests to /oauth/authorize will ignore the response_type=id_token parameter
+    default: true
   login.protocol:
     description: "Scheme to use for HTTP communication (http/https)"
+    default: https
   login.ldap.profile_type:
     description: "See uaa.ldap.profile_type - login.ldap prefix is used for backwards compatibility to enable ldap from login config"
   login.ldap.url:
@@ -267,19 +309,36 @@ properties:
   login.spring_profiles:
     description: "See uaa.spring_profiles - login.spring_profiles is used for backwards compatibility to enable ldap from login config"
   uaa.restricted_ips_regex:
-    description: "A pipe delimited set of regular expressions of IP addresses that can reach the listening HTTP port of the server."
+    description: "[Not Currently Used] A pipe delimited set of regular expressions of IP addresses that can reach the listening HTTP port of the server."
+    default: ~
+  uaa.proxy_ips_regex:
+    description: |
+      A pipe delimited set of regular expressions of IP addresses that are considered reverse proxies.
+      When a request from these IP addresses come in, the x-forwarded-for and x-forwarded-proto headers will be respected.
+      If the uaa.restricted_ips_regex is set, it will be appended to this list for backwards compatibility purposes
+      If spiff has been used and includes templates/cf-jobs.yml to generate the manifest. This list will automatically
+      contain the Router IP addresses
     default: 10\.\d{1,3}\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|169\.254\.\d{1,3}\.\d{1,3}|127\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.1[6-9]{1}\.\d{1,3}\.\d{1,3}|172\.2[0-9]{1}\.\d{1,3}\.\d{1,3}|172\.3[0-1]{1}\.\d{1,3}\.\d{1,3}
+  uaa.proxy.servers:
+    description: "Array of the router IPs acting as the first group of HTTP/TCP backends. These will be added to the proxy_ips_regex as exact matches. When using spiff, these will be router_z1 and router_z2 static IPs from cf-jobs.yml"
+    default: []
   login.brand:
-    description: "The brand to use for the reset password emails, available values are oss and pivotal"
+    description: "The branding style to use with the web interface, account confirmation, and password reset emails."
     default: oss
   login.asset_base_url:
-    description: "Base url for static assets, allows custom styling of the login server.  Use '/resources/pivotal' for Pivotal style."
+    description: "Base url for static assets, allows custom styling of the login server."
   login.uaa_certificate:
     description: "Certificate to import if the UAA is using self-signed certificates"
   login.catalina_opts:
     description:
   login.notifications.url:
     description: "The url for the notifications service (configure to use Notifications Service instead of SMTP server)"
+  login.prompt.username.text:
+    description: "The text used to prompt for a username during login"
+    default: Email
+  login.prompt.password.text:
+    description: "The text used to prompt for a password during login"
+    default: Password
   login.smtp:
     description: "SMTP server configuration, for password reset emails etc."
   login.smtp.host:
@@ -294,21 +353,10 @@ properties:
     description: "SMTP server password"
   login.links:
     description: "A hash of home/passwd/signup URLS (see commented examples below)"
-  login.links.home:
-    description: URL for primary console/dashboard for users
-    default: https://console.run.pivotal.io
   login.links.passwd:
     description: URL for requesting password reset
-    default: https://console.run.pivotal.io/password_resets/new
   login.links.signup:
     description: URL for requesting to signup/register for an account
-    default: https://console.run.pivotal.io/register
-  login.links.network:
-    description: URL for Pivotal Network
-    default: https://network.gopivotal.com/login
-  login.links.signup-network:
-    description: URL for requesting to signup/register for an account at Pivotal Network
-    default: https://network.gopivotal.com/registrations/new
   login.tiles:
     description: "A list of links to other services to show on the landing page after logging in and/or signing up, depending on whether login-link and/or signup-link is specified."
   login.port:
@@ -316,6 +364,8 @@ properties:
     description:
   login.uaa_base:
     description: "Location of the UAA."
+  login.self_service_links_enabled:
+    description: "Enable self-service account creation and password resets links."
   login.signups_enabled:
     description: "Enable account creation flow in the login server. Enabled by default."
   login.invitations_enabled:
@@ -326,6 +376,8 @@ properties:
     description: "Deprecated: Use login.saml.providers list objects"
   login.saml.entityid:
     description: "The ID to represent this server"
+  login.saml.entity_base_url:
+    description: "The URL for which SAML identity providers will post assertions to. If set it overrides the default of login.<domain>. This URL should NOT have the schema (http:// or https:// prefix in it) instead just the hostname. The schema is derived by login.protocol property. The default value is #{protocol}://login.#{properties.domain}"
   login.saml.idpEntityAlias:
     description: "Deprecated: Use login.saml.providers list objects"
   login.entity_id:
@@ -360,6 +412,12 @@ properties:
     description: "Timeout in milliseconds for connection pooling for SAML metadata HTTP requests"
   login.saml.socket.soTimeout:
     description: "Read timeout in milliseconds for SAML metadata HTTP requests"
+  login.saml.signMetaData:
+    description: "Set to true, if you wish that the UAA signs its SAML metadata"
+    default: true
+  login.saml.signRequest:
+    description: "Set to true, if you wish the that the UAA signs all its SAML auth requests"
+    default: true
   login.analytics.code:
     description: "Analytics code"
   login.analytics.domain:
@@ -389,6 +447,6 @@ properties:
   login.logout.redirect.parameter.disable:
     description: "When set to false, this allows an operator to leverage an open redirect on the UAA (/logout.do?redirect=google.com). Default value is true. No open redirect enabled"
   login.logout.redirect.parameter.whitelist:
-    description: "A list of URLs. When this list is non null, including empty, and disable=false, 
+    description: "A list of URLs. When this list is non null, including empty, and disable=false,
     logout redirects are allowed, but limited to the whitelist URLs. If a redirect parameter value is not white
     listed, redirect will be to the default URL."

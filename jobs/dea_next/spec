@@ -17,9 +17,8 @@ packages:
 - common
 - dea_next
 - warden
-- rootfs_lucid64
 - rootfs_cflinuxfs2
-- ruby-2.1.6
+- ruby-2.1.7
 
 properties:
   domain:
@@ -95,6 +94,14 @@ properties:
   dea_next.instance_disk_inode_limit:
     description: Limit on inodes for an instance container
     default: 200000
+  dea_next.staging_bandwidth_limit.rate:
+    description: "Network bandwidth limit for staging tasks in bytes per second"
+  dea_next.staging_bandwidth_limit.burst:
+    description: "Network bandwidth burst limit for staging tasks in bytes"
+  dea_next.instance_bandwidth_limit.rate:
+    description: "Network bandwidth limit for running instances in bytes per second"
+  dea_next.instance_bandwidth_limit.burst:
+    description: "Network bandwidth burst limit for running instances in bytes"
   dea_next.directory_server_protocol:
     description: 'The protocol to use when communicating with the directory server ("http" or "https")'
     default: 'https'
@@ -119,6 +126,11 @@ properties:
   dea_next.rlimit_core:
     description: "Maximum size of core file in bytes. 0 represents no core dump files can be created, and -1 represents no size limits."
     default: 0
+  dea_next.stacks:
+    default:
+      - name: "cflinuxfs2"
+        package_path: "/var/vcap/packages/rootfs_cflinuxfs2/rootfs"
+    description: "An array of stacks, specifying the name and package path."
   disk_quota_enabled:
     description: "disk quota must be disabled to use warden-inside-warden with the warden cpi"
     default: true
@@ -127,12 +139,17 @@ properties:
     default: "127.0.0.1"
   metron_endpoint.port:
     description: "The port used to emit messages to the Metron agent"
-    default: 3456
-  metron_endpoint.shared_secret:
-    description: "The key used to sign log messages"
-  networks.apps:
-    description: "DEA network information."
+    default: 3457
 
   router.requested_route_registration_interval_in_seconds:
     description: "Interval at which the router requests routes to be registered."
     default: 20
+
+  cc.srv_api_uri:
+    description: "API URI of cloud controller"
+  cc.internal_api_user:
+    default: "internal_user"
+    description: "User name to access internal endpoints"
+  cc.internal_api_password:
+    description: "Password to access internal endpoints"
+

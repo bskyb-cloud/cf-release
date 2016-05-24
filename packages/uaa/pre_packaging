@@ -1,24 +1,19 @@
 set -e -x
 
-#registrar information
-cd ${BUILD_DIR}/cf-registrar-bundle-for-identity
-BUNDLE_WITHOUT=development:test bundle package --all
-
 cd ${BUILD_DIR}
 
 # Make sure we can see uname
 export PATH=$PATH:/bin:/usr/bin
-
 #unpack Java - we support Mac OS 64bit and Linux 64bit otherwise we require JAVA_HOME to point to JDK
 if [ `uname` = "Darwin" ]; then
   mkdir java
   cd java
-  tar zxvf ../openjdk/openjdk-1.7.0-u40-unofficial-macosx-x86_64-bundle.tgz --exclude="._*"
-  export JAVA_HOME=${BUILD_DIR}/java/Contents/Home
+  tar zxvf ../openjdk/openjdk-1.8.0_60-x86_64-mountainlion.tar.gz --exclude="._*"
+  export JAVA_HOME=${BUILD_DIR}/java
 elif [ `uname` = "Linux" ]; then
   mkdir java
   cd java
-  tar zxvf ../openjdk/openjdk-1.7.0-u40-unofficial-linux-amd64.tgz
+  tar zxvf ../openjdk/openjdk-1.8.0_60-x86_64-trusty.tar.gz
   export JAVA_HOME=${BUILD_DIR}/java
 else
   if [ ! -d $JAVA_HOME ]; then
@@ -38,7 +33,8 @@ cp uaa/build/libs/cloudfoundry-identity-uaa-*.war ${BUILD_DIR}/uaa/cloudfoundry-
 
 #clean build data
 ./gradlew clean
+cd ${BUILD_DIR}
 rm -rf java
-rm -rf openjdk/openjdk-1.7.0-u40-unofficial-linux-amd64.tgz
-rm -rf openjdk/openjdk-1.7.0-u40-unofficial-macosx-x86_64-bundle.tgz
+rm -rf openjdk/openjdk-1.8.0_60-x86_64-mountainlion.tar.gz
+rm -rf openjdk/openjdk-1.8.0_60-x86_64-trusty.tar.gz
 ${BUILD_DIR}/uaa/.clean-cf-release-build

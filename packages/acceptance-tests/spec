@@ -1,7 +1,12 @@
 ---
 name: acceptance-tests
 dependencies:
-  - golang1.3
+  - golang1.4
   - cli
+  - rtr
 files:
-  - acceptance-tests/**/*
+  - github.com/cloudfoundry/cf-acceptance-tests/**/*
+excluded_files:
+  - github.com/cloudfoundry/cf-acceptance-tests/results/*
+  - github.com/cloudfoundry/cf-acceptance-tests/*config.json
+  - github.com/cloudfoundry/cf-acceptance-tests/**/*.test

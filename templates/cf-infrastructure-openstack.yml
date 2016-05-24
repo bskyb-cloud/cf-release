@@ -3,8 +3,10 @@ meta:
   environment: ~
   networks: ~
 
-  stemcell:
-    name: bosh-openstack-kvm-ubuntu-lucid-go_agent
+  stemcell: (( merge || .meta.default_stemcell ))
+
+  default_stemcell:
+    name: bosh-openstack-kvm-ubuntu-trusty-go_agent
     version: latest
 
   floating_static_ips: (( merge ))
@@ -32,9 +34,6 @@ properties:
   uaa:
     catalina_opts: -Xmx768m -XX:MaxPermSize=256m
     clients: (( merge ))
-
-  login:
-    catalina_opts: -Xmx768m -XX:MaxPermSize=256m
 
   dea_next:
     deny_networks: (( merge || nil ))
@@ -75,7 +74,6 @@ properties:
       - tag: admin
         name: uaaadmin
         password: (( merge ))
-
     databases:
       - tag: cc
         name: ccdb
@@ -83,6 +81,7 @@ properties:
       - tag: uaa
         name: uaadb
         citext: true
+    collect_statement_statistics: null
 
 compilation:
   cloud_properties: (( merge || meta.resource_pools.medium.cloud_properties ))
@@ -131,12 +130,6 @@ jobs:
         static_ips: (( static_ips(0) ))
         default: (( merge || nil ))
 
-  - name: logs_z1
-    instances: 1
-    networks:
-      - name: cf1
-        static_ips: (( static_ips(1) ))
-
   - name: nats_z1
     instances: 1
     networks:
@@ -161,19 +154,12 @@ jobs:
       - name: cf1
         static_ips: (( static_ips(5) ))
 
-  - name: routing_api_z1
+  - name: loggregator_z1
     instances: 0
     networks:
       - name: cf1
-        static_ips: (( static_ips(11) ))
 
-  - name: routing_api_z2
-    instances: 0
-    networks:
-      - name: cf2
-        static_ips: []
-
-  - name: loggregator_z1
+  - name: doppler_z1
     instances: 1
     networks:
       - name: cf1
@@ -190,16 +176,10 @@ jobs:
         static_ips: (( static_ips(8, 9, 10) ))
 
   - name: consul_z1
-    instances: 0
+    instances: 1
     networks:
       - name: cf1
         static_ips: (( static_ips(12, 13, 14) ))
-
-  - name: logs_z2
-    instances: 0
-    networks:
-      - name: cf2
-        static_ips: []
 
   - name: nats_z2
     instances: 0
@@ -230,6 +210,11 @@ jobs:
     networks:
      - name: cf2
 
+  - name: doppler_z2
+    instances: 0
+    networks:
+      - name: cf1
+
   - name: loggregator_trafficcontroller_z2
     instances: 0
     networks:
@@ -248,7 +233,4 @@ jobs:
     instances: 0
 
   - name: runner_z2
-    instances: 0
-
-  - name: login_z2
     instances: 0

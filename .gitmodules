@@ -7,8 +7,8 @@
 [submodule "src/dea_next"]
   path = src/dea_next
   url = https://github.com/nimbus-cloud/dea_ng.git
-[submodule "src/gorouter"]
-	path = src/gorouter
+[submodule "src/github.com/cloudfoundry/gorouter"]
+	path = src/github.com/cloudfoundry/gorouter
 	url = https://github.com/nimbus-cloud/gorouter
 [submodule "src/stager"]
   path = src/stager
@@ -52,9 +52,6 @@
 [submodule "src/narc/src/github.com/nu7hatch/gouuid"]
 	path = src/narc/src/github.com/nu7hatch/gouuid
 	url = https://github.com/nu7hatch/gouuid.git
-[submodule "shared"]
-	path = shared
-	url = https://github.com/cloudfoundry/shared-release-packages.git
 [submodule "src/hm9000"]
 	path = src/hm9000
 	url = https://github.com/cloudfoundry/hm-workspace.git
@@ -64,21 +61,12 @@
 [submodule "src/loggregator"]
 	path = src/loggregator
 	url = https://github.com/cloudfoundry/loggregator
-[submodule "src/acceptance-tests"]
-	path = src/acceptance-tests
-	url = https://github.com/cloudfoundry/cf-acceptance-tests
 [submodule "packages/ruby"]
 	path = packages/ruby
 	url = https://github.com/cloudfoundry/ruby-package
 [submodule "src/uaa"]
 	path = src/uaa
 	url = https://github.com/cloudfoundry/uaa.git
-[submodule "src/login"]
-	path = src/login
-	url = https://github.com/cloudfoundry/login-server.git
-[submodule "src/etcd-metrics-server"]
-	path = src/etcd-metrics-server
-	url = https://github.com/cloudfoundry-incubator/etcd-metrics-server.git
 [submodule "src/buildpacks/ruby"]
 	path = src/buildpacks/ruby
 	url = https://github.com/cloudfoundry/heroku-buildpack-ruby.git
@@ -94,9 +82,18 @@
 [submodule "packages/ruby-2.1.4"]
 	path = packages/ruby-2.1.4
 	url = https://github.com/cloudfoundry/ruby-package
-[submodule "src/routing-api"]
-	path = src/routing-api
-	url = https://github.com/cloudfoundry-incubator/routing-api.git
 [submodule "src/etcd-release"]
 	path = src/etcd-release
 	url = https://github.com/cloudfoundry-incubator/etcd-release.git
+[submodule "src/statsd-injector"]
+	path = src/statsd-injector
+	url = https://github.com/cloudfoundry/statsd-injector.git
+[submodule "src/github.com/cloudfoundry/cf-acceptance-tests"]
+	path = src/github.com/cloudfoundry/cf-acceptance-tests
+	url = https://github.com/cloudfoundry/cf-acceptance-tests
+[submodule "src/consul-release"]
+	path = src/consul-release
+	url = https://github.com/cloudfoundry-incubator/consul-release.git
+[submodule "src/cf-routing-release"]
+	path = src/cf-routing-release
+	url = https://github.com/cloudfoundry-incubator/cf-routing-release.git

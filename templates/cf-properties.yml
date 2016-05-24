@@ -66,16 +66,13 @@ properties:
     audit_events:
       cutoff_age_in_days: 31
 
-    billing_event_writing_enabled: false
-
     users_can_select_backend: true
-    diego_docker: false
     default_to_diego_backend: false
     allow_app_ssh_access: true
     default_app_memory: 1024
     default_app_disk_in_mb: 1024
     maximum_app_disk_in_mb: 2048
-    client_max_body_size: 1536M
+    client_max_body_size: 15M
 
     default_health_check_timeout: 60
     maximum_health_check_timeout: 180
@@ -84,6 +81,7 @@ properties:
     min_recommended_cli_version: ~
 
     external_host: api
+    external_port: 9022
     srv_api_uri: (( "https://" external_host "." domain ))
 
     bulk_api_password: (( merge ))
@@ -103,8 +101,8 @@ properties:
     disable_custom_buildpacks: false
 
     broker_client_timeout_seconds: 70
-    broker_client_default_async_poll_interval_seconds: (( merge || 60 ))
-    broker_client_max_async_poll_duration_minutes: (( merge || 10080 ))
+    broker_client_default_async_poll_interval_seconds: ~
+    broker_client_max_async_poll_duration_minutes: ~
 
     resource_pool:
       resource_directory_key: (( domain "-cc-resources" ))
@@ -116,11 +114,13 @@ properties:
       fog_connection: ~
       cdn: ~
       max_package_size: 1073741824
+      max_valid_packages_stored: ~
 
     droplets:
       droplet_directory_key: (( domain "-cc-droplets" ))
       fog_connection: ~
       cdn: ~
+      max_staged_droplets_stored: ~
 
     development_mode: false
 
@@ -144,6 +144,8 @@ properties:
     user_buildpacks: (( merge || [] ))
     system_buildpacks: (( merge || default_buildpacks ))
     default_buildpacks:
+      - name: staticfile_buildpack
+        package: buildpack_staticfile
       - name: java_buildpack
         package: buildpack_java
       - name: ruby_buildpack
@@ -156,8 +158,6 @@ properties:
         package: buildpack_python
       - name: php_buildpack
         package: buildpack_php
-      - name: staticfile_buildpack
-        package: buildpack_staticfile
       - name: binary_buildpack
         package: buildpack_binary
 
@@ -179,7 +179,7 @@ properties:
         alert_if_above_mb: ~
         restart_if_consistently_above_mb: ~
         restart_if_above_mb: ~
-    external_protocol: "http"
+    external_protocol: ~
 
   hm9000:
     url: (( "https://hm9000." domain ))
@@ -190,9 +190,8 @@ properties:
       code: ~
       domain: ~
     url: ~
-    catalina_opts: (( merge ))
-    uaa_certificate: ~
-    protocol: https
+    catalina_opts: ~
+    protocol: ~
     brand: oss
     asset_base_url: ~
     uaa_base: ~
@@ -212,11 +211,8 @@ properties:
       password: ~
 
     links:
-      home: (( "https://console." domain ))
       passwd: (( "https://console." domain "/password_resets/new" ))
       signup: (( "https://console." domain "/register" ))
-      network: ~
-      signup-network: ~
 
     logout: ~
 
@@ -224,7 +220,7 @@ properties:
 
     saml: ~
 
-    restricted_ips_regex: 10\.\d{1,3}\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|169\.254\.\d{1,3}\.\d{1,3}|127\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.1[6-9]{1}\.\d{1,3}\.\d{1,3}|172\.2[0-9]{1}\.\d{1,3}\.\d{1,3}|172\.3[0-1]{1}\.\d{1,3}\.\d{1,3}
+    restricted_ips_regex: ~
 
   uaa:
     catalina_opts: (( merge ))
@@ -232,12 +228,14 @@ properties:
     url: (( "https://uaa." domain ))
     issuer: (( url ))
 
-    no_ssl: false
+    no_ssl: ~
+    require_https: ~
 
     scim:
       userids_enabled: (( merge || true ))
       users: (( merge ))
       external_groups: ~
+      groups: ~
 
     jwt:
       signing_key: (( merge ))
@@ -255,16 +253,12 @@ properties:
         countFailuresWithinSeconds: ~
         lockoutPeriodSeconds: ~
 
-    batch:
-      username: (( merge ))
-      password: (( merge ))
-
     login: ~
 
     ldap: ~
 
     newrelic: ~
-
+    port: 8080
     spring_profiles: ~
 
     user: ~
@@ -277,7 +271,7 @@ properties:
         authorities: oauth.login,scim.write,clients.read,notifications.write,critical_notifications.write,emails.write,scim.userids,password.write
         secret: (( merge ))
         authorized-grant-types: authorization_code,client_credentials,refresh_token
-        redirect-uri: (( properties.login.protocol "://login." domain ))
+        redirect-uri: (( "https://login." domain ))
       notifications:
         secret: (( merge ))
         authorities: cloud_controller.admin,scim.read
@@ -290,8 +284,12 @@ properties:
         authorities: scim.userids
         secret: (( merge ))
         authorized-grant-types: client_credentials
+      cc_routing:
+        authorities: routing.router_groups.read
+        secret: (( merge ))
+        authorized-grant-types: client_credentials
       gorouter:
-        authorities: clients.read,clients.write,clients.admin,route.admin,route.advertise
+        authorities: clients.read,clients.write,clients.admin,routing.routes.write,routing.routes.read
         authorized-grant-types: client_credentials,refresh_token
         scope: openid,cloud_controller_service_permissions.read
         secret: (( merge ))

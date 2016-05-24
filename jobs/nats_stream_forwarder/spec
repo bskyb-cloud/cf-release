@@ -9,15 +9,10 @@ templates:
 
 packages:
   - common
-  - ruby-2.1.6
+  - ruby-2.1.7
   - nats
 
 properties:
-  nats_props:
-    description:
-    default: "nats"
-  networks.apps:
-    description: "Nats stream forwarder network information."
   nats.user:
     description: "Username for server authentication."
   nats.password:

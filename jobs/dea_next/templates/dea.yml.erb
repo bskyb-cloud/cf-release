@@ -34,10 +34,9 @@ logging:
   level: <%= p("dea_next.logging_level") %>
   syslog: vcap.dea_next
 
-<% if_p("metron_endpoint.host", "metron_endpoint.port", "metron_endpoint.shared_secret") do |host, port, shared_secret| %>
+<% if_p("metron_endpoint.host", "metron_endpoint.port") do |host, port| %>
 loggregator:
   router: <%= host %>:<%= port %>
-  shared_secret: <%= shared_secret %>
 <% end %>
 
 index: <%= spec.index %>
@@ -60,24 +59,37 @@ staging:
   disk_limit_mb: <%= p("dea_next.staging_disk_limit_mb") %>
   cpu_limit_shares: <%= p("dea_next.staging_cpu_limit_shares") %>
   disk_inode_limit: <%= p("dea_next.staging_disk_inode_limit") %>
-  <% if_p("dea_next.http_proxy") do %>
+<% if_p("dea_next.staging_bandwidth_limit.rate", "dea_next.staging_bandwidth_limit.burst") do |rate, burst| %>
+  bandwidth_limit:
+    rate: <%= rate %>
+    burst: <%= burst %>
+<% end %>
+
+<% if_p("dea_next.http_proxy") do %>
   http_proxy: <%= p("dea_next.http_proxy") %>
-  <% end %>
+<% end %>
   
 instance:
   memory_to_cpu_share_ratio: <%= p("dea_next.instance_memory_to_cpu_share_ratio") %>
   min_cpu_share_limit: <%= p("dea_next.instance_min_cpu_share_limit") %>
   max_cpu_share_limit: <%= p("dea_next.instance_max_cpu_share_limit") %>
   disk_inode_limit: <%= p("dea_next.instance_disk_inode_limit") %>
+<% if_p("dea_next.instance_bandwidth_limit.rate", "dea_next.instance_bandwidth_limit.burst") do |rate, burst| %>
+  bandwidth_limit:
+    rate: <%= rate %>
+    burst: <%= burst %>
+<% end %>
 
-stacks:
-  - name: lucid64
-    package_path: /var/vcap/packages/rootfs_lucid64
-  - name: cflinuxfs2
-    package_path: /var/vcap/packages/rootfs_cflinuxfs2
+stacks: <%= p("dea_next.stacks", []).to_yaml.gsub("---", "") %>
 
 placement_properties:
   zone: <%= p("dea_next.zone") %>
+
+<%
+  cc_url = URI.parse(p("cc.srv_api_uri"))
+  cc_url.userinfo = "#{p("cc.internal_api_user")}:#{p("cc.internal_api_password")}"
+%>
+cc_url: <%= cc_url.to_s %>
 
 firewalls:
   script: /var/vcap/packages/dea_next/firewalls/obtain_firewall_config.rb

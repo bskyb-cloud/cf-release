@@ -18,8 +18,8 @@ packages:
   - nginx
   - nginx_newrelic_plugin
   - libpq
-  - mysqlclient
-  - ruby-2.1.6
+  - mysqlclient-5.5
+  - ruby-2.2.3
 
 properties:
   ssl.skip_cert_verify:
@@ -51,9 +51,6 @@ properties:
   app_domains:
     description: "Array of domains for user apps (example: 'user.app.space.foo', a user app called 'neat' will listen at 'http://neat.user.app.space.foo')"
 
-  networks.apps:
-    description: "TODO"
-
   nats.user:
     description: "Username for cc client to connect to NATS"
   nats.password:
@@ -65,6 +62,8 @@ properties:
 
   nfs_server.address:
     description: "NFS server for droplets and apps (not used in an AWS deploy, use s3 instead)"
+  nfs_server.share_path:
+    description: "The location at which to mount the nfs share"
 
   request_timeout_in_seconds:
     description: "Timeout for requests in seconds."
@@ -94,8 +93,6 @@ properties:
     description: "The longest this job can take before it is cancelled"
   cc.jobs.droplet_upload.timeout_in_seconds:
     description: "The longest this job can take before it is cancelled"
-  cc.jobs.model_deletion.timeout_in_seconds:
-    description: "The longest this job can take before it is cancelled"
 
   cc.app_events.cutoff_age_in_days:
     description: "How old an app event should stay in cloud controller database before being cleaned up"
@@ -109,28 +106,19 @@ properties:
   cc.failed_jobs.cutoff_age_in_days:
     description: "How old a failed job should stay in cloud controller database before being cleaned up"
     default: 31
-  cc.billing_event_writing_enabled:
-    description: "If true, billing events are written to the CCDB."
-    default: false
   cc.info.name:
     description: "name attribute in the /info endpoint"
   cc.info.build:
     description: "build attribute in the /info endpoint"
   cc.info.version:
     description: "version attribute in the /info endpoint"
-  cc.info.support_address:
-    description: "URL for the support attribute in the /info endpoint"
   cc.info.description:
     description: "free form description for attribute in the /info endpoint"
   cc.info.custom:
     description: "Custom values for /v2/info endpoint"
 
-  cc.directories.tmpdir:
-    default: "/var/vcap/data/cloud_controller_ng/tmp"
-    description: "The directory to use for temporary files"
-
   cc.external_protocol:
-    default: "http"
+    default: "https"
     description: "The protocol used to access the CC API from an external entity"
   cc.external_host:
     default: "api"
@@ -150,6 +138,15 @@ properties:
     description: "User name used by Diego to access internal endpoints"
   cc.internal_api_password:
     description: "Password used by Diego to access internal endpoints"
+  cc.diego.nsync_url:
+    default: http://nsync.service.cf.internal:8787
+    description: "URL of the Diego nsync service"
+  cc.diego.stager_url:
+    default: http://stager.service.cf.internal:8888
+    description: "URL of the Diego stager service"
+  cc.diego.tps_url:
+    default: http://tps.service.cf.internal:1518
+    description: "URL of the Diego tps service"
 
   cc.uaa_resource_id:
     default: "cloud_controller,cloud_controller_service_permissions"
@@ -178,8 +175,6 @@ properties:
 
   cc.stacks:
     default:
-      - name: "lucid64"
-        description: "Ubuntu 10.04 on x86-64"
       - name: "cflinuxfs2"
         description: "Cloud Foundry Linux-based filesystem"
     description: "Tag used by the DEA to describe capabilities (i.e. 'Windows7', 'python-linux'). DEA and CC must agree."
@@ -189,10 +184,10 @@ properties:
 
   cc.staging_upload_user:
     default: ""
-    description: "S3 Access key for staging droplets on AWS installs; Blobstore user for other IaaSs"
+    description: "User name used to access internal endpoints of Cloud Controller to upload files when staging"
   cc.staging_upload_password:
     default: ""
-    description: "S3 Secure Access Key for staging droplets on AWS installs; Blobstore password for other IaaSs"
+    description: "User's password used to access internal endpoints of Cloud Controller to upload files when staging"
 
   cc.quota_definitions:
     description: "Hash of default quota definitions. Overriden by custom quota definitions."
@@ -291,9 +286,6 @@ properties:
   ccdb.max_connections:
     default: 25
     description: "Maximum connections for Sequel"
-  ccdb.max_ar_connections:
-    default: 5
-    description: "Maximum connections for ActiveRecord"
   ccdb.pool_timeout:
     default: 10
     description:
@@ -322,9 +314,7 @@ properties:
     default: "127.0.0.1"
   metron_endpoint.port:
     description: "The port used to emit messages to the Metron agent"
-    default: 3456
-  metron_endpoint.shared_secret:
-    description: "The key used to sign log messages"
+    default: 3457
 
   logger_endpoint.use_ssl:
     description: "Whether to use ssl for logger endpoint listed at /v2/info"
@@ -349,9 +339,6 @@ properties:
   cc.users_can_select_backend:
     default: true
     description: "Allow non-admin users to switch their apps between DEA and Diego backends"
-  cc.diego_docker:
-    default: false
-    description: "Enable diego docker support"
   cc.default_to_diego_backend:
     default: false
     description: "Use Diego backend by default for new apps"

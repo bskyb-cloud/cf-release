@@ -27,8 +27,8 @@ properties:
     description: Toggles cli verification of the Elastic Runtime API SSL certificate
   acceptance_tests.system_domain:
     description: The system domain for your CF release
-  acceptance_tests.oauth_password:
-    description: The password for the uaa gorouter client
+  acceptance_tests.client_secret:
+    description: The client secret for the uaa gorouter client
   acceptance_tests.nodes:
     default: 2
     description: The number of parallel test executors to spawn. The larger the number the higher the stress on the system.
@@ -56,14 +56,23 @@ properties:
   acceptance_tests.include_v3:
     default: false
     description: Flag to include the v3 API test suite.
-  acceptance_tests.include_routing_api:
+  acceptance_tests.include_routing:
     default: false
-    description: Flag to include the routing API test suite.
+    description: Flag to include the routing test suite.
+  acceptance_tests.include_route_services:
+    default: false
+    description: Flag to include the route services tests. Diego must be deployed for these tests to pass.
   acceptance_tests.use_diego:
     default: false
-    description: Services tests push their apps using diego if enabled
+    description: App tests push their apps using diego if enabled. Route service tests require this flag to run.
+  acceptance_tests.use_http:
+    default: false
+    description: Flag for using HTTP when making api and application requests rather than the default HTTPS
   acceptance_tests.skip_regex:
     description: Regex for tests that should be skipped
+  acceptance_tests.skip_diego_unsupported_tests:
+    default: false
+    description: Skip tests that are known to not be supported by Diego. Set to true if your deployment defaults to Diego as its runtime.
   acceptance_tests.default_timeout:
     description: Default Timeout
   acceptance_tests.cf_push_timeout:
@@ -72,3 +81,26 @@ properties:
     description: Timeout for long curls
   acceptance_tests.broker_start_timeout:
     description: Timeout for broker starts
+  acceptance_tests.enable_color:
+    description: "Enable colorized output on ginkgo."
+    default: true
+  acceptance_tests.existing_user:
+    description: "The username of an existing user. If set, the acceptance-tests will push apps and perform other actions as this user, otherwise its default behaviour is to create a temporary user for such actions."
+  acceptance_tests.existing_user_password:
+    description: "The password of the existing user. Only required if the existing user property is also being set."
+  acceptance_tests.staticfile_buildpack_name:
+    description: "The name of the staticfile buildpack to use in acceptance tests that specify a buildpack."
+  acceptance_tests.java_buildpack_name:
+    description: "The name of the java buildpack to use in acceptance tests that specify a buildpack."
+  acceptance_tests.ruby_buildpack_name:
+    description: "The name of the ruby buildpack to use in acceptance tests that specify a buildpack."
+  acceptance_tests.nodejs_buildpack_name:
+    description: "The name of the nodejs buildpack to use in acceptance tests that specify a buildpack."
+  acceptance_tests.go_buildpack_name:
+    description: "The name of the go buildpack to use in acceptance tests that specify a buildpack."
+  acceptance_tests.python_buildpack_name:
+    description: "The name of the python buildpack to use in acceptance tests that specify a buildpack."
+  acceptance_tests.php_buildpack_name:
+    description: "The name of the php buildpack to use in acceptance tests that specify a buildpack."
+  acceptance_tests.binary_buildpack_name:
+    description: "The name of the binary buildpack to use in acceptance tests that specify a buildpack."
