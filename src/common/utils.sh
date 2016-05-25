@@ -86,7 +86,3 @@ kill_and_wait() {
 running_in_container() {
   grep -q '/instance' /proc/self/cgroup
 }
-
-running_in_container() {
-  grep -q '/instance' /proc/self/cgroup
-}
