@@ -93,9 +93,9 @@ properties:
     description: "Log level for router"
     default: "info"
 
-  router.internal_only_patterns
+  router.internal_only_patterns:
     description: "Internal only domains"
-  router.extra_internal_ips
+  router.extra_internal_ips:
     description: "Internal ip patterns"
 
   nats.user:
