@@ -59,8 +59,8 @@ http {
         server_tokens off;
 
         set $test "";
-        
-        <% properties.router.internal_only_patterns.each do |pattern| %>
+
+        <% p("router.internal_only_patterns").each do |pattern| %>
         if ($host ~ <%= pattern %>)
         {
           set $test P;
@@ -73,7 +73,7 @@ http {
           set $internal Y;
         }
 
-        <% properties.router.extra_internal_ips.each do |pattern| %>
+        <% p("router.extra_internal_ips").each do |pattern| %>
         if ($http_x_lb_forwarded_for ~ <%= pattern %>)
         {
           set $internal Y;
