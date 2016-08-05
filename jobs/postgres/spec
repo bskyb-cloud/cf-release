@@ -10,14 +10,13 @@ templates:
   pg_hba.conf.erb: config/pg_hba.conf
 
   postgres_backup.cron.erb: config/postgres_backup.cron
-  postgres_backup.erb: bin/postgres_backup  
+  postgres_backup.erb: bin/postgres_backup
   pg_backup.sh.erb: bin/pg_backup.sh
   utils.sh: bin/utils.sh
 
 packages:
   - common
-  - postgres
-  - postgres-9.4.2
+  - postgres-9.4.6
 
 properties:
   databases.db_scheme:
@@ -38,6 +37,8 @@ properties:
   databases.collect_statement_statistics:
     description: "Enable the `pg_stat_statements` extension and collect statement execution statistics"
     default: false
+  databases.additional_config:
+    description: "A map of additional key/value pairs to include as extra configuration properties"
 
   databases.backup.enable:
     default: false

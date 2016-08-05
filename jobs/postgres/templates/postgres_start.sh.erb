@@ -1,132 +1,142 @@
-#!/bin/bash -e
+#!/bin/bash -exu
 
-JOB_DIR=/var/vcap/jobs/postgres
-PACKAGE_DIR=/var/vcap/packages/postgres-9.4.2
-PACKAGE_DIR_OLD=/var/vcap/packages/postgres
+function main() {
+  local pgversion
+  pgversion="postgres-9.4.6"
 
-STORE_DIR=/var/vcap/store
-DATA_DIR=$STORE_DIR/postgres-9.4.2
-DATA_DIR_OLD=$STORE_DIR/postgres
-DATA_DIR_PREVIOUS=$STORE_DIR/postgres-previous
+  JOB_DIR=/var/vcap/jobs/postgres
+  PACKAGE_DIR="/var/vcap/packages/${pgversion}"
+  STORE_DIR=/var/vcap/store
+  DATA_DIR="${STORE_DIR}/${pgversion}"
 
-RUN_DIR=/var/vcap/sys/run/postgres
-PIDFILE=$RUN_DIR/postgres.pid
+  DATA_DIR_PREVIOUS="${STORE_DIR}/postgres-previous"
+  DATA_DIR_OLD="${STORE_DIR}/postgres-unknown"
 
-HOST='0.0.0.0'
-PORT="<%= p("databases.port") %>"
-LD_LIBRARY_PATH=$PACKAGE_DIR/lib:$LD_LIBRARY_PATH
-
-if [ -d $DATA_DIR -a -f $STORE_DIR/FLAG_POSTGRES_UPGRADE ]; then
-  echo "FAIL: DB upgrade stopped in the middle, manual intervention required, quitting..."
-  exit 1
-fi
-
-sysctl -w "kernel.shmmax=284934144"
-
-if [ ! -d $STORE_DIR ]; then
-  echo "ERROR: storage directory doesn't exist"
-  echo "Please add persistent disk to this job"
-  exit 1
-fi
-
-if [ ! -d $DATA_DIR -o ! -f $DATA_DIR/postgresql.conf ]; then
-  mkdir -p $DATA_DIR
-  chown vcap:vcap $DATA_DIR
-
-  # initdb creates data directories
-  su - vcap -c "$PACKAGE_DIR/bin/initdb -E utf8 --locale en_US.UTF-8 -D $DATA_DIR"
-
-  mkdir -p $DATA_DIR/pg_log
-  chown vcap:vcap $DATA_DIR/pg_log
-fi
-
-if [ -d $DATA_DIR_OLD -a -f $DATA_DIR_OLD/postgresql.conf ]; then
-
-  if [ -d $DATA_DIR_PREVIOUS ]; then
-    rm -rf $DATA_DIR_PREVIOUS
+  if [[ -d "${STORE_DIR}/postgres-9.4.5" ]]; then
+    DATA_DIR_OLD="${STORE_DIR}/postgres-9.4.5"
   fi
 
-  touch $STORE_DIR/FLAG_POSTGRES_UPGRADE
+  if [[ -d "${STORE_DIR}/postgres-9.4.2" ]]; then
+    DATA_DIR_OLD="${STORE_DIR}/postgres-9.4.2"
+  fi
 
-  # Prevent upgrade from overwriting PIDFILE with new process during upgrade
-  chown root:root $PIDFILE
+  RUN_DIR=/var/vcap/sys/run/postgres
+  PIDFILE="${RUN_DIR}/postgres.pid"
 
-  su - vcap -c "$PACKAGE_DIR/bin/pg_upgrade \
-    --old-datadir $DATA_DIR_OLD \
-    --new-datadir $DATA_DIR \
-    --old-bindir $PACKAGE_DIR_OLD/bin \
-    --new-bindir $PACKAGE_DIR/bin"
+  HOST="0.0.0.0"
+  PORT="<%= p("databases.port") %>"
 
-  chown vcap:vcap $PIDFILE
+  if [[ -n "${LD_LIBRARY_PATH:-}" ]]; then
+    LD_LIBRARY_PATH="${PACKAGE_DIR}/lib:${LD_LIBRARY_PATH}"
+  else
+    LD_LIBRARY_PATH="${PACKAGE_DIR}/lib"
+  fi
 
-  rm -f $STORE_DIR/FLAG_POSTGRES_UPGRADE
-  mv $DATA_DIR_OLD $DATA_DIR_PREVIOUS
-fi
+  sysctl -w "kernel.shmmax=284934144"
 
-cp $JOB_DIR/config/{postgresql,pg_hba}.conf $DATA_DIR
-chown vcap:vcap $DATA_DIR/{postgresql,pg_hba}.conf
+  if [ ! -d "${STORE_DIR}" ]; then
+    echo "ERROR: storage directory doesn't exist"
+    echo "Please add persistent disk to this job"
+    exit 1
+  fi
 
-echo "Starting PostgreSQL: "
-su - vcap -c "$PACKAGE_DIR/bin/pg_ctl -o \"-h $HOST -p $PORT\" \
-              -w start -D $DATA_DIR -l \"$DATA_DIR/pg_log/startup.log\""
+  if [ -d "${DATA_DIR_OLD}" -a -f "${DATA_DIR_OLD}/postgresql.conf" ]; then
+    rm -rf "${DATA_DIR_PREVIOUS}"
 
-echo "PostgreSQL started successfully"
+    cp -r "${DATA_DIR_OLD}" "${DATA_DIR}"
+    mv "${DATA_DIR_OLD}" "${DATA_DIR_PREVIOUS}"
+  fi
 
-echo "Creating roles..."
-<% p("databases.roles", []).each do |role| %>
-  echo "Trying to create role <%= role["name"] %>..."
-  set +e
-  # TODO remove unused roles automatically
-  # Default permissions are: nosuperuser nologin inherit nocreatedb.
-  # Will fail if role already exists, which is OK
-  $PACKAGE_DIR/bin/psql -U vcap -p $PORT -d postgres \
-                        -c "CREATE ROLE \"<%= role["name"] %>\""
-  set -e
+  mkdir -p "${DATA_DIR}"
+  chown -R vcap:vcap "${DATA_DIR}"
 
-  echo "Setting password for role <%= role["name"] %>..."
-  $PACKAGE_DIR/bin/psql -U vcap -p $PORT -d postgres \
-                        -c "ALTER ROLE \"<%= role["name"] %>\" \
-                            WITH LOGIN PASSWORD '<%= role["password"] %>'"
+  if [ ! -f "${DATA_DIR}/postgresql.conf" ]; then
+    # initdb creates data directories
+    su - vcap -c "${PACKAGE_DIR}/bin/initdb -E utf8 --locale en_US.UTF-8 -D ${DATA_DIR}"
 
-  <% if role["permissions"] %>
-    echo "Adding permissions <%= role["permissions"].join(' ') %> for role <%= role["name"] %>..."
-    $PACKAGE_DIR/bin/psql -U vcap -p $PORT -d postgres \
-                      -c "ALTER ROLE \"<%= role["name"] %>\" \
-                          WITH <%= role["permissions"].join(' ') %>"
-  <% end %>
-<% end %>
+    mkdir -p "${DATA_DIR}/pg_log"
+    chown vcap:vcap "${DATA_DIR}/pg_log"
+  fi
 
-echo "Creating databases..."
-<% p("databases.databases", []).each do |database| %>
-  echo "Trying to create database <%= database["name"] %>..."
-  set +e
-  su - vcap -c "$PACKAGE_DIR/bin/createdb \"<%= database["name"] %>\" -p $PORT"
-  set -e
+  cp "${JOB_DIR}/config/postgresql.conf" "${JOB_DIR}/config/pg_hba.conf" "${DATA_DIR}"
+  chown vcap:vcap "${DATA_DIR}/postgresql.conf" "${DATA_DIR}/pg_hba.conf"
 
-  <% if database["citext"] %>
-    echo "Trying to install citext..."
+  echo "Starting PostgreSQL: "
+  su - vcap -c "${PACKAGE_DIR}/bin/pg_ctl -o \"-h ${HOST} -p ${PORT}\" \
+                  -w start -D ${DATA_DIR} -l \"${DATA_DIR}/pg_log/startup.log\""
+
+  echo "PostgreSQL started successfully"
+
+  create_roles
+  create_databases
+}
+
+function pgexec() {
+  local database
+  database="${1}"
+
+  local command
+  command="${2}"
+
+  "${PACKAGE_DIR}/bin/psql" \
+    -U "vcap" \
+    -p "${PORT}" \
+    -d "${database}" \
+    -c "${command}"
+}
+
+function create_roles() {
+  echo "Creating roles..."
+  <% p("databases.roles", []).each do |role| %>
+    echo "Trying to create role <%= role["name"] %>..."
     set +e
-    $PACKAGE_DIR/bin/psql -U vcap -p $PORT \
-                          -d "<%= database["name"] %>" \
-                          -c "CREATE EXTENSION citext"
-    $PACKAGE_DIR/bin/psql -U vcap -p $PORT \
-                          -d "<%= database["name"] %>" \
-                          -c "CREATE EXTENSION citext FROM UNPACKAGED"
+    # TODO remove unused roles automatically
+    # Default permissions are: nosuperuser nologin inherit nocreatedb.
+    # Will fail if role already exists, which is OK
+    pgexec postgres "CREATE ROLE \"<%= role["name"] %>\""
     set -e
-  <% end %>
 
-  <% if p("databases.collect_statement_statistics") %>
-    echo "Enabling pg_stat_statements extension..."
-    $PACKAGE_DIR/bin/psql -U vcap -p $PORT \
-                          -d "<%= database["name"] %>" \
-                          -c "CREATE EXTENSION IF NOT EXISTS pg_stat_statements"
-  <% end %>
+    echo "Setting password for role <%= role["name"] %>..."
+    pgexec postgres "ALTER ROLE \"<%= role["name"] %>\" WITH LOGIN PASSWORD '<%= role["password"] %>'"
 
-  <% if database["run_on_every_startup"] %>
-    <% database["run_on_every_startup"].each do |query| %>
-      $PACKAGE_DIR/bin/psql -U vcap -p $PORT \
-                            -d "<%= database["name"] %>" \
-                            -c "<%= query %>"
+    <% if role["permissions"] %>
+      echo "Adding permissions <%= role["permissions"].join(' ') %> for role <%= role["name"] %>..."
+      pgexec postgres "ALTER ROLE \"<%= role["name"] %>\" WITH <%= role["permissions"].join(' ') %>"
     <% end %>
   <% end %>
-<% end %>
+}
+
+function create_databases() {
+  echo "Creating databases..."
+  <% p("databases.databases", []).each do |database| %>
+    echo "Trying to create database <%= database["name"] %>..."
+    set +e
+    su - vcap -c "${PACKAGE_DIR}/bin/createdb \"<%= database["name"] %>\" -p ${PORT}"
+    set -e
+
+    <% if database["citext"] %>
+      echo "Trying to install citext..."
+      set +e
+      pgexec "<%= database["name"] %>" "CREATE EXTENSION citext"
+      pgexec "<%= database["name"] %>" "CREATE EXTENSION citext FROM UNPACKAGED"
+      set -e
+    <% end %>
+
+    echo "Enabling pgcrypto extension..."
+    pgexec "<%= database["name"] %>" "CREATE EXTENSION IF NOT EXISTS pgcrypto"
+
+
+    <% if p("databases.collect_statement_statistics") %>
+      echo "Enabling pg_stat_statements extension..."
+      pgexec "<%= database["name"] %>" "CREATE EXTENSION IF NOT EXISTS pg_stat_statements"
+    <% end %>
+
+    <% if database["run_on_every_startup"] %>
+      <% database["run_on_every_startup"].each do |query| %>
+        pgexec "<%= database["name"] %>" "<%= query %>"
+      <% end %>
+    <% end %>
+  <% end %>
+}
+
+main

@@ -1,5 +1,4 @@
 meta:
-
   stemcell: (( merge || .meta.default_stemcell ))
 
   default_stemcell:
@@ -128,10 +127,15 @@ jobs:
         static_ips: (( static_ips(1) ))
 
   - name: nfs_z1
-    instances: 1
+    instances: 0
     networks:
       - name: cf1
         static_ips: (( static_ips(2) ))
+
+  - name: blobstore_z1
+    instances: 1
+    networks:
+      - name: cf1
 
   - name: postgres_z1
     instances: 1
@@ -264,6 +268,4 @@ properties:
         name: uaadb
         citext: true
     collect_statement_statistics: null
-
-  uaa:
-    catalina_opts: -Xmx768m -XX:MaxPermSize=256m
+    additional_config: (( merge || nil ))

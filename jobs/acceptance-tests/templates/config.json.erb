@@ -24,10 +24,8 @@
     :artifacts_directory => "/var/vcap/sys/log/acceptance_tests/",
     :syslog_drain_port => 1234,
     :syslog_ip_address => discover_external_ip,
-    :use_diego => properties.acceptance_tests.use_diego,
-    :system_domain => properties.acceptance_tests.system_domain,
-    :client_secret => properties.acceptance_tests.client_secret,
-    :include_route_services => properties.acceptance_tests.include_route_services,
+    :backend => properties.acceptance_tests.backend,
+    :include_tasks => properties.acceptance_tests.include_tasks,
     :use_http => properties.acceptance_tests.use_http,
     :existing_user => properties.acceptance_tests.existing_user,
     :existing_user_password => properties.acceptance_tests.existing_user_password,
@@ -47,6 +45,11 @@
   config[:python_buildpack_name] = properties.acceptance_tests.python_buildpack_name if properties.acceptance_tests.python_buildpack_name
   config[:php_buildpack_name] = properties.acceptance_tests.php_buildpack_name if properties.acceptance_tests.php_buildpack_name
   config[:binary_buildpack_name] = properties.acceptance_tests.binary_buildpack_name if properties.acceptance_tests.binary_buildpack_name
+
+  config[:persistent_app_host] = properties.acceptance_tests.persistent_app_host if properties.acceptance_tests.persistent_app_host
+  config[:persistent_app_space] = properties.acceptance_tests.persistent_app_space if properties.acceptance_tests.persistent_app_space
+  config[:persistent_app_org] = properties.acceptance_tests.persistent_app_org if properties.acceptance_tests.persistent_app_org
+  config[:persistent_app_quota_name] = properties.acceptance_tests.persistent_app_quota_name if properties.acceptance_tests.persistent_app_quota_name
 %>
 
 <%= JSON.pretty_generate(config) %>

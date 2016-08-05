@@ -16,7 +16,6 @@ RUN \
     curl \
     debconf-utils \
     gemnasium-toolbelt \
-    git \
     jq/trusty-backports \
     libcurl4-openssl-dev \
     libmysqlclient-dev \
@@ -29,11 +28,18 @@ RUN \
     libyaml-dev \
     mercurial \
     python-software-properties \
+    software-properties-common \
     python-pip \
     unzip \
     wget \
     zip \
     zlib1g-dev
+
+RUN \
+  add-apt-repository ppa:git-core/ppa -y && \
+  apt-get update && \
+  apt-get install -y git && \
+  apt-get remove -y --purge software-properties-common
 
 RUN  \
   echo 'mysql-server mysql-server/root_password password password' | debconf-set-selections && \
@@ -54,10 +60,10 @@ RUN \
   wget https://github.com/postmodern/ruby-install/archive/v0.4.1.tar.gz -P /tmp && \
   tar zxf /tmp/v0.4.1.tar.gz -C /tmp && \
   cd /tmp/ruby-install-0.4.1 && make install && \
-  ruby-install ruby 2.1.7 && \
-  ruby-install ruby 2.2.3 && \
-  rm -rf /usr/local/src/ruby-2.1.7 && \
-  rm -rf /usr/local/src/ruby-2.2.3 && \
+  ruby-install ruby 2.1.8 && \
+  ruby-install ruby 2.2.4 && \
+  rm -rf /usr/local/src/ruby-2.1.8 && \
+  rm -rf /usr/local/src/ruby-2.2.4 && \
   rm -rf /tmp/*
 
 RUN \
@@ -65,7 +71,7 @@ RUN \
   cd /tmp/chruby && git reset --hard 310bd34d1fcbb3365814c85018114123cef5a41f && \
   cd /tmp/chruby && ./scripts/setup.sh && \
   echo 'source /usr/local/share/chruby/chruby.sh' >> $HOME/.bashrc && \
-  echo 'chruby 2.2.3' >> $HOME/.bashrc && \
+  echo 'chruby 2.2.4' >> $HOME/.bashrc && \
   rm -rf /tmp/*
 
 RUN \
@@ -73,7 +79,7 @@ RUN \
   bash -l -c "pip install s3cmd" && \
   bash -l -c "gem update --system" && \
   bash -l -c "gem install bundler --no-rdoc --no-ri" && \
-  bash -l -c "gem install bosh_cli --version 1.3125.0 --no-rdoc --no-ri"
+  bash -l -c "gem install bosh_cli --version 1.3215.0 --no-rdoc --no-ri"
 
 ENV GOPATH $HOME/go
 ENV PATH $HOME/go/bin:/usr/local/go/bin:$PATH
@@ -90,14 +96,16 @@ RUN \
   rm -rf /tmp/*
 
 RUN \
-  wget https://dl.bintray.com/mitchellh/vagrant/vagrant_1.6.5_x86_64.deb -P /tmp && \
-  dpkg --install /tmp/vagrant_1.6.5_x86_64.deb && \
+  wget https://releases.hashicorp.com/vagrant/1.8.1/vagrant_1.8.1_x86_64.deb -P /tmp && \
+  dpkg --install /tmp/vagrant_1.8.1_x86_64.deb && \
   vagrant plugin install vagrant-aws && \
   rm -rf /tmp/*
 
 RUN \
-  wget https://s3.amazonaws.com/go-cli/releases/v6.12.3/cf-linux-amd64.tgz -P /tmp && \
-  tar xvf /tmp/cf-linux-amd64.tgz -C /usr/local/bin && \
+  wget \
+    -P /tmp \
+    http://go-cli.s3-website-us-east-1.amazonaws.com/releases/v6.16.1/cf-cli_6.16.1_linux_x86-64.tgz && \
+  tar xvf /tmp/cf-cli_6.16.1_linux_x86-64.tgz -C /usr/local/bin && \
   ln -s /usr/local/bin/cf /usr/local/bin/gcf && \
   rm -rf /tmp/*
 

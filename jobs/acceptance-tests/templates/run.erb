@@ -6,13 +6,9 @@ export GOROOT=$(readlink -nf /var/vcap/packages/golang1.4)
 export PATH=${GOROOT}/bin:${PATH}
 
 export PATH=/var/vcap/packages/cli/bin:${PATH} # put the cli on the path
-export PATH=/var/vcap/packages/rtr/bin:${PATH} # put the routing-api cli on the path
 
 export GOPATH=/var/vcap/packages/acceptance-tests
 export PATH=${GOPATH}/bin:${PATH}
-
-export GOPATH=${PWD}/Godeps/_workspace:${GOPATH}
-export PATH=${PWD}/Godeps/_workspace/bin:${PATH}
 
 export CF_COLOR=false
 export CONFIG=/var/vcap/jobs/acceptance-tests/bin/config.json
@@ -35,25 +31,42 @@ EXITSTATUS=0
 nodes=<%= properties.acceptance_tests.nodes %>
 
 skipPackages="-skipPackage=helpers,"
+skipPackages+=<%= properties.acceptance_tests.include_diego_ssh ? "" : "ssh," %>
+skipPackages+=<%= properties.acceptance_tests.include_diego_docker ? "" : "docker," %>
+skipPackages+=<%= properties.acceptance_tests.include_backend_compatibility ? "" : "backend_compatibility," %>
 skipPackages+=<%= properties.acceptance_tests.include_v3 ? "" : "v3," %>
 skipPackages+=<%= properties.acceptance_tests.include_security_groups ? "" : "security_groups," %>
 skipPackages+=<%= properties.acceptance_tests.include_logging ? "" : "logging," %>
 skipPackages+=<%= properties.acceptance_tests.include_operator ? "" : "operator," %>
 skipPackages+=<%= properties.acceptance_tests.include_internet_dependent ? "" : "internet_dependent," %>
 skipPackages+=<%= properties.acceptance_tests.include_services ? "" : "services," %>
-skipPackages+=<%= properties.acceptance_tests.include_routing ? "" : "routing," %>
+skipPackages+=<%= properties.acceptance_tests.include_route_services ? "" : "route_services," %>
 [[ $skipPackages == *, ]] && skipPackages=${skipPackages%?} # strip trailing comma
 
 <% skips = [] %>
 <% skips.push("SSO") unless properties.acceptance_tests.include_sso %>
-<% skips.push("NO_DIEGO_SUPPORT") if properties.acceptance_tests.skip_diego_unsupported_tests %>
+<%
+case p("acceptance_tests.backend")
+when "diego"
+  skips.push("NO_DIEGO_SUPPORT")
+when "dea"
+  skips.push("NO_DEA_SUPPORT")
+else
+  skips.push("NO_DIEGO_SUPPORT")
+  skips.push("NO_DEA_SUPPORT")
+end
+%>
 <% if_p("acceptance_tests.skip_regex") { skips.push properties.acceptance_tests.skip_regex } %>
 skips=<%= skips.empty? ? "" : %Q[-skip="#{skips.join("|")}"] %>
 
 verbose=<%= properties.acceptance_tests.verbose ? "-v" : "" %>
 noColorFlag=<%= properties.acceptance_tests.enable_color ? "" : "-noColor" %>
 
-bin/test -r $noColorFlag -slowSpecThreshold=120 -randomizeAllSpecs $verbose -nodes=$nodes $skipPackages $skips -keepGoing || EXITSTATUS=$?
+set +e
+bin/test -r $noColorFlag -slowSpecThreshold=120 -randomizeAllSpecs $verbose -nodes=$nodes $skipPackages $skips -keepGoing > /var/vcap/sys/log/acceptance_tests.log
+EXITSTATUS=$?
+set -e
+cat /var/vcap/sys/log/acceptance_tests.log
 
 echo "Acceptance Tests Complete; exit status: $EXITSTATUS"
 

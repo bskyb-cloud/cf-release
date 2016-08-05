@@ -1,3 +1,0 @@
-set -e
-
-cp java-buildpack/java-buildpack-v3.3.1.zip ${BOSH_INSTALL_TARGET}

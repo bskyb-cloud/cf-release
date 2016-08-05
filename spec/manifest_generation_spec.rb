@@ -1,5 +1,4 @@
 require 'support/yaml_eq'
-require 'support/lamb-properties'
 require 'yaml'
 require 'tempfile'
 require 'erb'
@@ -11,9 +10,7 @@ describe "Manifest Generation" do
       `./scripts/generate_deployment_manifest #{infrastructure} spec/fixtures/#{infrastructure}/cf-stub.yml > #{example_manifest.path}`
       expect($?.exitstatus).to eq(0)
 
-      expected = File.read("spec/fixtures/#{infrastructure}/cf-manifest.yml.erb")
-      lamb_properties = LambProperties.new(infrastructure)
-      expected = ERB.new(expected).result(lamb_properties.get_binding)
+      expected = File.read("spec/fixtures/#{infrastructure}/cf-manifest.yml")
       actual = File.read(example_manifest.path)
 
       expect(actual).to yaml_eq(expected)
@@ -24,8 +21,8 @@ describe "Manifest Generation" do
     it_behaves_like "generating manifests", "aws"
   end
 
-  context "warden" do
-    it_behaves_like "generating manifests", "warden"
+  context "bosh-lite" do
+    it_behaves_like "generating manifests", "bosh-lite"
   end
 
   context "openstack" do
