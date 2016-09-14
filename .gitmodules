@@ -1,12 +1,6 @@
-[submodule "src/github.com/cloudfoundry/gorouter"]
-	path = src/github.com/cloudfoundry/gorouter
-	url = https://github.com/nimbus-cloud/gorouter
 [submodule "src/collector"]
   path = src/collector
   url = https://github.com/cloudfoundry/collector.git
-[submodule "src/gnatsd"]
-	path = src/gnatsd
-	url = https://github.com/apcera/gnatsd.git
 [submodule "src/loggregator"]
 	path = src/loggregator
 	url = https://github.com/cloudfoundry/loggregator
@@ -25,9 +19,6 @@
 [submodule "src/uaa-release"]
 	path = src/uaa-release
 	url = https://github.com/cloudfoundry/uaa-release
-[submodule "src/github.com/cloudfoundry-incubator/route-registrar"]
-	path = src/github.com/cloudfoundry-incubator/route-registrar
-	url = https://github.com/cloudfoundry-incubator/route-registrar
 [submodule "src/dea-hm-workspace"]
 	path = src/dea-hm-workspace
 	url = https://github.com/nimbus-cloud/dea-hm-workspace
@@ -37,3 +28,12 @@
 [submodule "src/capi-release"]
 	path = src/capi-release
 	url = https://github.com/nimbus-cloud/capi-release
+[submodule "src/nats-release"]
+	path = src/nats-release
+	url = https://github.com/cloudfoundry/nats-release
+[submodule "src/routing-release"]
+	path = src/routing-release
+	url = https://github.com/nimbus-cloud/routing-release
+[submodule "src/postgres-release"]
+	path = src/postgres-release
+	url = https://github.com/cloudfoundry/postgres-release.git

@@ -6,6 +6,10 @@ director_uuid: REPLACE_WITH_DIRECTOR_ID
 
 releases:
 - {name: cf, version: latest}
+- {name: diego, version: latest}
+- {name: etcd, version: latest}
+- {name: garden-linux, version: latest}
+- {name: cflinuxfs2-rootfs , version: latest}
 
 networks:
 - name: cf_private
@@ -45,6 +49,24 @@ resource_pools:
   cloud_properties:
     availability_zone: REPLACE_WITH_AZ
     instance_type: c3.large
+- name: diego
+  network: cf_private
+  stemcell:
+    name: bosh-aws-xen-hvm-ubuntu-trusty-go_agent
+    version: REPLACE_WITH_BOSH_STEMCELL_VERSION
+  cloud_properties:
+    availability_zone: REPLACE_WITH_AZ
+    ephemeral_disk:
+      size: 40000
+    instance_type: m3.2xlarge
+- name: small
+  network: cf_private
+  stemcell:
+    name: bosh-aws-xen-hvm-ubuntu-trusty-go_agent
+    version: REPLACE_WITH_BOSH_STEMCELL_VERSION
+  cloud_properties:
+    availability_zone: REPLACE_WITH_AZ
+    instance_type: t2.medium
 
 compilation:
   workers: 6
@@ -106,6 +128,72 @@ jobs:
       agent:
         mode: server
 
+- name: diego_cell_z1
+  instances: 1
+  resource_pool: diego
+  templates:
+  - name: consul_agent
+    release: cf
+  - name: rep
+    release: diego
+  - name: garden
+    release: garden-linux
+  - name: cflinuxfs2-rootfs-setup
+    release: cflinuxfs2-rootfs
+  - name: metron_agent
+    release: cf
+  networks:
+  - name: cf_private
+  update:
+    serial: true
+    max_in_flight: 1
+  properties:
+    metron_agent:
+      zone: z1
+    diego:
+      rep:
+        zone: z1
+
+- name: diego_brain_z1
+  instances: 1
+  resource_pool: diego
+  templates:
+  - name: consul_agent
+    release: cf
+  - name: etcd
+    release: etcd
+  - name: bbs
+    release: diego
+  - name: auctioneer
+    release: diego
+  - name: stager
+    release: cf
+  - name: nsync
+    release: cf
+  - name: tps
+    release: cf
+  - name: cc_uploader
+    release: cf
+  - name: file_server
+    release: diego
+  - name: route_emitter
+    release: diego
+  - name: metron_agent
+    release: cf
+  persistent_disk: 20480
+  networks:
+  - name: cf_private
+  update:
+    serial: true
+    max_in_flight: 1
+  properties:
+    consul:
+      agent:
+        services:
+          etcd: {}
+    metron_agent:
+      zone: z1
+
 - name: blobstore_z1
   instances: 1
   persistent_disk: 102400
@@ -125,7 +213,7 @@ jobs:
     route_registrar:
       routes:
       - name: blobstore
-        port: 80
+        port: 8080
         registration_interval: 20s
         tags:
           component: blobstore
@@ -159,6 +247,7 @@ jobs:
   - {name: binary-buildpack, release: cf}
   - {name: nodejs-buildpack, release: cf}
   - {name: ruby-buildpack, release: cf}
+  - {name: java-buildpack, release: cf}
   - {name: php-buildpack, release: cf}
   - {name: python-buildpack, release: cf}
   - {name: staticfile-buildpack, release: cf}
@@ -182,6 +271,7 @@ jobs:
   resource_pool: small_z1
   templates:
   - {name: haproxy, release: cf}
+  - {name: consul_agent, release: cf}
   - {name: metron_agent, release: cf}
   networks:
   - name: elastic
@@ -194,36 +284,15 @@ jobs:
         REPLACE_WITH_SSL_CERT_AND_KEY
     router:
       servers:
-        z1: [10.0.16.102]
-
-- name: hm9000_z1
-  instances: 1
-  resource_pool: small_z1
-  templates:
-  - {name: consul_agent, release: cf}
-  - {name: hm9000, release: cf}
-  - {name: metron_agent, release: cf}
-  - {name: route_registrar, release: cf}
-  networks:
-  - name: cf_private
-  properties:
-    consul:
-      agent:
-        services:
-          hm9000: {}
-    route_registrar:
-      routes:
-      - name: hm9000
-        registration_interval: 20s
-        port: 5155
-        uris:
-        - "hm9000.REPLACE_WITH_SYSTEM_DOMAIN"
+        - 10.0.16.102
 
 - name: doppler_z1
   instances: 1
   resource_pool: small_z1
   templates:
   - {name: doppler, release: cf}
+  - {name: metron_agent, release: cf}
+  - {name: syslog_drain_binder, release: cf}
   networks:
   - name: cf_private
   properties:
@@ -288,7 +357,15 @@ jobs:
       scim:
         userids_enabled: true
         users:
-        - admin|PASSWORD|scim.write,scim.read,openid,cloud_controller.admin,doppler.firehose,routing.router_groups.read
+          - name: admin
+            password: PASSWORD
+            groups:
+              - scim.write
+              - scim.read
+              - openid
+              - cloud_controller.admin
+              - doppler.firehose
+              - routing.router_groups.read
     uaadb:
       address: 10.0.16.101
       databases:
@@ -311,62 +388,50 @@ jobs:
   properties:
     dropsonde: {enabled: true}
 
-- name: runner_z1
-  instances: 1
-  resource_pool: small_z1
-  templates:
-  - {name: consul_agent, release: cf}
-  - {name: dea_next, release: cf}
-  - {name: dea_logging_agent, release: cf}
-  - {name: metron_agent, release: cf}
-  networks:
-  - name: cf_private
-  properties:
-    consul:
-      agent:
-        services:
-          dea:
-            check:
-              name: dns_health_check
-              script: /var/vcap/jobs/dea_next/bin/dns_health_check
-              interval: 5m
-              status: passing
-    dea_next: {zone: z1}
-
 properties:
+  router:
+    route_services_secret: PASSWORD
+    ssl_skip_validation: true
   networks: {apps: cf_private}
   app_domains: [REPLACE_WITH_SYSTEM_DOMAIN]
   cc:
-    allow_app_ssh_access: false
+    allow_app_ssh_access: true
+    default_to_diego_backend: true
+    internal_api_user: internal_user
     buildpacks:
       blobstore_type: webdav
       webdav_config:
+        blobstore_timeout: 5
         password: PASSWORD
-        private_endpoint: https://blobstore.service.cf.internal
+        private_endpoint: https://blobstore.service.cf.internal:4443
         public_endpoint: https://blobstore.REPLACE_WITH_SYSTEM_DOMAIN
         secret: PASSWORD
         username: blobstore-username
     droplets:
       blobstore_type: webdav
       webdav_config:
+        blobstore_timeout: 5
         password: PASSWORD
-        private_endpoint: https://blobstore.service.cf.internal
+        private_endpoint: https://blobstore.service.cf.internal:4443
         public_endpoint: https://blobstore.REPLACE_WITH_SYSTEM_DOMAIN
         secret: PASSWORD
         username: blobstore-username
+    external_port: 9022
     packages:
       blobstore_type: webdav
       webdav_config:
+        blobstore_timeout: 5
         password: PASSWORD
-        private_endpoint: https://blobstore.service.cf.internal
+        private_endpoint: https://blobstore.service.cf.internal:4443
         public_endpoint: https://blobstore.REPLACE_WITH_SYSTEM_DOMAIN
         secret: PASSWORD
         username: blobstore-username
     resource_pool:
       blobstore_type: webdav
       webdav_config:
+        blobstore_timeout: 5
         password: PASSWORD
-        private_endpoint: https://blobstore.service.cf.internal
+        private_endpoint: https://blobstore.service.cf.internal:4443
         public_endpoint: https://blobstore.REPLACE_WITH_SYSTEM_DOMAIN
         secret: PASSWORD
         username: blobstore-username
@@ -422,11 +487,144 @@ properties:
         - 10.0.16.105
     encrypt_keys:
     - PASSWORD
-    ca_cert: REPLACE_WITH_CA_CERT
-    server_cert: REPLACE_WITH_SERVER_CERT
-    agent_cert: REPLACE_WITH_AGENT_CERT
-    server_key: REPLACE_WITH_SERVER_KEY
-    agent_key: REPLACE_WITH_AGENT_KEY
+    ca_cert: |
+      -----BEGIN CERTIFICATE-----
+      MIIFBzCCAu+gAwIBAgIBATANBgkqhkiG9w0BAQsFADATMREwDwYDVQQDEwhjb25z
+      dWxDQTAeFw0xNjAzMzEyMjAwNDlaFw0yNjAzMzEyMjAwNTJaMBMxETAPBgNVBAMT
+      CGNvbnN1bENBMIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEA0tLZmi6x
+      aqbGl7VvKjJoIf2PAilPDzMNH56p7PUOHutRreKn70dzmMr/CbLShMllgjW6ZvOL
+      osw0iSVKWewiWtrFD8vmRx+OkmdgxPD9813EvnjsvrGyWOxmK7eTahy2ZpMrzmnV
+      RiDNzu0xBlnBHqAFUPOyWLXuBGFGsDgQt7tLlHIp6o0t4qkBjC/qQSKgBcQt9qxq
+      cnetiMDDuNhTQT7a+4Br61nwooSAOYmjR9Ox4ULSscMf1qEmQQfJNGJ8ifqF/SOM
+      a8Dyt7uUIFRbMzA/wdiy0BXBjJysD5B4tXtWdHSg/8de0STPWOR4dnuOdupAwub+
+      9ICOk1FRCEVPHyBVgQppb4SqUa9loJ2fDJQSl0PY+1kC+bC9czEoNg/hDTBYCiVM
+      bYPEOnx/810Pm1PoUEmp4rTQUM6EM6pFQBIW3+rxpOJlhxmRJyZzsUpZB9xsh7P2
+      Q80OI+XZL/QCI8/t65QamsIbV+IlG5IeALBC+oaC3Rfnfpy3cEXl1vw3Z1qTM9qR
+      8ZAUDLUcYcULtDjRqgvEMLaK/vd3UMAXeVpPGgEbno3eXl/spByN2nwmpZM1RcB0
+      CtmN+byDv0fAYlUqBsDhes0AaeY3+ZN4opEXUHGR7qDl3hwZBIHG8niFMtVTb5na
+      Ktam3U+e1kIVsgbz5+B2KEJKUvjI5yLGDM0CAwEAAaNmMGQwDgYDVR0PAQH/BAQD
+      AgEGMBIGA1UdEwEB/wQIMAYBAf8CAQAwHQYDVR0OBBYEFJB06Ynto2S0F7wv5hdE
+      y+pVN1NNMB8GA1UdIwQYMBaAFJB06Ynto2S0F7wv5hdEy+pVN1NNMA0GCSqGSIb3
+      DQEBCwUAA4ICAQBIMYRZ64GV/oe+yPWK5JhU8W85qT1ROfJC1Hwg6zXtP0pIUlyN
+      oAyCtc2i1Z3Cp2K9BIfjg+E2+UhSWnwA/6hLPd0R5KMKNOCYCPZClGlYxskQ6irD
+      yiceJGwFj3BJYQzOu+XSn55vvouJOG/I24azkSQ5Fwcvqm+8DdznX5P33PRw1DX7
+      mJKNIWflcygrxR908iAIfv0V2btVoDr1YGwPKZKwEJ5jyjrNipbM0kErWzwD6V65
+      6qluPalUgUnGrzbAqWgKQ/a015gUqRN1lu6XbRhoV4xCFUFLkubHVoCDJ2Y52pXD
+      Tu2WKmwpqx3CI2lTe0Vqs2wrSLZrcKK8t3tUsl3qEPFFdxM8+Q/WIlu6l4USOmAh
+      uEmdeSBefFlAYyblOfY84W2h0IsBny4KrBIWl7+QL/38cwA+BII/XoilmoIiDctd
+      0aT/55KDrD6kZRR9917Qp586mTagfpHL6SHQbn7hh/YQ0VFlmVffXc9T4mDkcFaR
+      04bsl87bgG5Bk4f1msBgmnzvJqzbzdHwVOsjZpeN6N683O6YbxK4DNPqWr/BOdkH
+      ZzF06444shzlvEdXlcb122q69AbWNcm+HHkmEQUYH3hoYyiwiicdqDskUScj0QpF
+      1ddNutiVjXZsmFRwpFxNBTCoNdns8Q9uUQfzHx8DomWgfX9TNzn7y1cc3g==
+      -----END CERTIFICATE-----
+    server_cert: |
+      -----BEGIN CERTIFICATE-----
+      MIIEMDCCAhigAwIBAgIRAOE+FRzzg4N7y23SfTwde6owDQYJKoZIhvcNAQELBQAw
+      EzERMA8GA1UEAxMIY29uc3VsQ0EwHhcNMTYwMzMxMjIwMDUyWhcNMTgwMzMxMjIw
+      MDUyWjAhMR8wHQYDVQQDExZzZXJ2ZXIuZGMxLmNmLmludGVybmFsMIIBIjANBgkq
+      hkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAoiPUUo3sUf8oK98wiAzsEJuhMP1ZW/IG
+      PZR3bZyMN4B1WTtSEvATFU0kyCioJv6Num4hBfsYCyUbCX2r4bHwaO1TLQwY+kkT
+      phBkhqqsvNk230GNhEC6/oukPlPRjEZau0v0Mzlx1VUHtZCyMZk8pPo6nXxMfapM
+      9A7DU2YRjW0LhusGWWEsZVnTgw4A0SYrOA0lutcGkID9fFMOhdrLpk+OPVRPWFae
+      Hp4lDLQ6NX78W+u8g6k2ocTjZ2bE4U/87+mYPNgRDJYGkaohOxDNKwDtC97MQmmS
+      fdOYapff2NOjGdexWf4Nl2GPm94GDkFQmVpKOuJ5PfMKgFFl4kFBSQIDAQABo3Ew
+      bzAOBgNVHQ8BAf8EBAMCA7gwHQYDVR0lBBYwFAYIKwYBBQUHAwEGCCsGAQUFBwMC
+      MB0GA1UdDgQWBBQJBvWAwnpCTcyTl0uUP9xRTG6IVjAfBgNVHSMEGDAWgBSQdOmJ
+      7aNktBe8L+YXRMvqVTdTTTANBgkqhkiG9w0BAQsFAAOCAgEAY1LebPT74T47BbmF
+      DY+I3nRgtKWpB97OrtKmKsXjGAd/RlyINmUgQQFlXasTMbUMNz6jHUPMl7o+yrt3
+      h8pbBDBmxqQ59cJArHABj77feRptq9tiR21b1lecM7dlf7JtQX4iIMYockEiEZHH
+      fA0lzw4r9jyWu8ts7b3Il1TDC0CvCcB6RDfaXLhGZ90BJBx3jh9ekWpT8F25UQwT
+      odGq0vSDDdrI/s7NZT3Dw1I7BpLiK2Y9ULR7NDJOZhd885rMZ2Rdt3cb+F7SO+B+
+      gE8NktIwkXiMIpdCF0QYSAfi4uZQkdTnL+W7v1lBDPtswuCyozgR3mInVtAeWSPX
+      JGDCmiHZFkHhmgoNH15zv0Jx7t9iY5uaDeeNvjbXfFrckMYY6hJf5EhowzTUKOxK
+      YpsJuFSFydGxcz/uivEkEl/Gk9FYxrm5FBimV52GI04Y9P3F6O0LfANgjEB1rC2v
+      4ebBG13nZddQHbRUzmDemVP42GC68+l2T4eczQB3qhH80HejN7cnzNEgx+24+YwB
+      4wtVmSqDh5sB9SlY+HBiJvFgtl0cQISYEnHlxzN/3HbS/xjjXGom9FWXmpTK9FPx
+      1SiBHNWnErTnrq7Vxo5rPjzK02xf6CdrUj/35TKau/ssB9IXSLV4mW9z87w4apyI
+      WymD9N6OHIM0MEmMcYIqph7Yo2w=
+      -----END CERTIFICATE-----
+    agent_cert: |
+      -----BEGIN CERTIFICATE-----
+      MIIEJjCCAg6gAwIBAgIRAJIdGe7fx391grV1/m9i/2AwDQYJKoZIhvcNAQELBQAw
+      EzERMA8GA1UEAxMIY29uc3VsQ0EwHhcNMTYwMzMxMjIwMDUzWhcNMTgwMzMxMjIw
+      MDUzWjAXMRUwEwYDVQQDEwxjb25zdWwgYWdlbnQwggEiMA0GCSqGSIb3DQEBAQUA
+      A4IBDwAwggEKAoIBAQDZ7JoVMCudtjSXp6OGGG2S1xV15R3qm55+Pi4dCgO/g31O
+      hJoWQL3fL2S1IfZMEzVjZYRperBhoHHjudkOw8opss2pvHynwQKaj10cKkrI1zak
+      t59FkM2GAgkjmeGt3ZbPL+tQM3Pb8K4facxhbM44iOdPpCCGPl/CNWYv8HBtwRUv
+      wfTYcmQq5ameA4GEzokKwYXf4cHCMY69sPMKatGldS8B2gal+wBV7PHo+qsvdZug
+      YIRLWGbGDBLN9xi2JMHHrNodZKlWSEEEZaSa8kctqFw4iZRYdmKAc7i9HCRxTobP
+      W18Dn6GGSCCYMaMCKzrvnwyBWrN5baoNl+cvE7SlAgMBAAGjcTBvMA4GA1UdDwEB
+      /wQEAwIDuDAdBgNVHSUEFjAUBggrBgEFBQcDAQYIKwYBBQUHAwIwHQYDVR0OBBYE
+      FEjW45GNWfzsd5+P9U1KPlLKKBqeMB8GA1UdIwQYMBaAFJB06Ynto2S0F7wv5hdE
+      y+pVN1NNMA0GCSqGSIb3DQEBCwUAA4ICAQDOTO7uujSHt5NUIx8h03TMQxm5Fj1m
+      2KaAYmut4HTNBTQHNcvNCTQ86HURj1zaVnNqGNo4zWE89jPb6RkfutcxaWIZzXw1
+      CtTFg/DEQlMrRHe7MvaLwr8pVidGjU+yaqDdctzIKi0zKvdb4ImyK3ZucXuoIjth
+      S0cMxIBB2D99+8LnPfyAnJT2PFAZ92GyWZRUTZZa3c/QMaJZLaMmp6Yihs/fubQf
+      PxgnbirRScO+dqxjzz+3911VHiEGrnLcjE5rvPxjsW4G2g6goK1/Lg+RbAOhAC/6
+      UbJQEKAlxqsvBxidkT0OtQJ/AibtPB425KzM2K+v1zXUyFmPHbJspxMCFgkHvOdf
+      NYJ6oVLj6lVH5vvFM8pdffbaICZTWBSQG/w5p4EObF5cIL9/PtKGTLj0bi5b8oPc
+      ZVRdYiXObpaMO5fJQKY+c3QMzjPczdmBaXF15EyfTUPpRtdyBfica/0BkW0w4XRK
+      uEC+YFgx5qEVmscss2K42ZCJ8b/vwcLH0HqMmc8OoPLakVbD/A+64Kt1mdJ7N63K
+      GO8DbjsU7qg9T8Y/6O7iJ/FEvvyWmUo0GJlSga/hrHH0LK5ZXVqCjkyVNjojRy0E
+      G8X8rON9IPCgIJmpWuOyOKDRONAteTVpYiusmG7s24aX/ZA11vUmpR0iNunbPNct
+      bKLaH/vFK5U4cg==
+      -----END CERTIFICATE-----
+    server_key: |
+      -----BEGIN RSA PRIVATE KEY-----
+      MIIEpQIBAAKCAQEAoiPUUo3sUf8oK98wiAzsEJuhMP1ZW/IGPZR3bZyMN4B1WTtS
+      EvATFU0kyCioJv6Num4hBfsYCyUbCX2r4bHwaO1TLQwY+kkTphBkhqqsvNk230GN
+      hEC6/oukPlPRjEZau0v0Mzlx1VUHtZCyMZk8pPo6nXxMfapM9A7DU2YRjW0LhusG
+      WWEsZVnTgw4A0SYrOA0lutcGkID9fFMOhdrLpk+OPVRPWFaeHp4lDLQ6NX78W+u8
+      g6k2ocTjZ2bE4U/87+mYPNgRDJYGkaohOxDNKwDtC97MQmmSfdOYapff2NOjGdex
+      Wf4Nl2GPm94GDkFQmVpKOuJ5PfMKgFFl4kFBSQIDAQABAoIBADAJHWY31cOVLHmS
+      7fXgni9tbBvvcwHieibUTW2T65al4B5HjNE/fufYqwUBxo+G6sZIyk/TTBRBMfll
+      2f5LkUYEyZeW9e9wpvmT8bRT7EkmsTMDYMHFy6CODmLIwlQko8zJe9eRNUBWqKoJ
+      7ED1fRoDaEowARlZ0uKbXRLgMmMLam8yWo3aDdeZqp9lQoDLs+R5YubYPSvFkg8l
+      19YOrVeXnSeAIKQBx0qLzMWWcYRSFm/WuirhklI1fzrI0RoqpDM7ye7KYjYzxmXM
+      a9VukotuMzc316Ny903/QzgriYK04+D2LTTr6MxP5QQLQKpRpnv9BAaOzB7uluo+
+      RS5uGAECgYEA111bXtXHmHp69Sw9o+5Jq6LVfg/J0P5VYqy92mAcWfQsyNgSA8nJ
+      7q+pEu7e+bRZ/SjqsP9LNm6zF3RIbwDGJUm9dFPT9NCzjAnKDtUcVchL4oodJUKK
+      nhKM3DTbr5QEM7AAaaPa/oHc1fw+kMayIhGo/z04xEQuRgF7lUIDPqECgYEAwLuW
+      fMq8+GsJB/1eUFwU3k013rnHAxlBC7e+4bdTcUv3QC+bAIGLKkK4bcKn6ElnTrSt
+      KXPB7V/Loi0Gwx1035aPwDKVjdQDbug/MX2M/aKeRnQb9VPndluUJDh+deikUAI7
+      gqJKv92a279Dat54fjLXKPqsGQAqy403tT6hSakCgYEAkCuO3w19cDWN2lKjcPoz
+      lxKKmLk5AQ9BWa0J6wYr9Ivg7xK1/JM4+u/c3y/JVJ/HHhImChbc4rN4cFsHokeC
+      XbPff+AeI+USTMzA1u0S6toK8rxCho7k/KyuXzuDVSZhKbjIje+Cyp1kmFskBwb8
+      eJIZ78OsHLcHwxV7BZALXAECgYEAnCVevqvifcD6CCcWCjUQEyqqwk/xFGmZcUzk
+      sSo9yESrhK0M/1P008BKe2KBdohB0lo/EJ5gN1itOi8Qk3OCBMOOo0BYOhfS0EAJ
+      MqdtWvAtGxdmr1PS6uk3FEFQ82YP+WJVpHin5to7ZF2I2UR0ionWF7U/SOIByfgX
+      chfTxEECgYEAz8ob55iUxdL/9Dj3JBZp3039l5DqzqS2TVh+b2Gj1R8pvlnHXhBE
+      JqXK0KoItB+9qJYzTAfsQJHErPL8+15sqaZHsQrssXgHdGXSqOsTmUWCvNVYi2yr
+      0Iy00Tlkozwhwf5Y3PzITI1SWGqa3rZesUydj5FnuyeZTiLVajqPWe4=
+      -----END RSA PRIVATE KEY-----
+    agent_key: |
+      -----BEGIN RSA PRIVATE KEY-----
+      MIIEowIBAAKCAQEA2eyaFTArnbY0l6ejhhhtktcVdeUd6puefj4uHQoDv4N9ToSa
+      FkC93y9ktSH2TBM1Y2WEaXqwYaBx47nZDsPKKbLNqbx8p8ECmo9dHCpKyNc2pLef
+      RZDNhgIJI5nhrd2Wzy/rUDNz2/CuH2nMYWzOOIjnT6Qghj5fwjVmL/BwbcEVL8H0
+      2HJkKuWpngOBhM6JCsGF3+HBwjGOvbDzCmrRpXUvAdoGpfsAVezx6PqrL3WboGCE
+      S1hmxgwSzfcYtiTBx6zaHWSpVkhBBGWkmvJHLahcOImUWHZigHO4vRwkcU6Gz1tf
+      A5+hhkggmDGjAis6758MgVqzeW2qDZfnLxO0pQIDAQABAoIBAG3D4PBfLPjpN6BT
+      jegTEc3ujB6v4tuyuqg3xZ5W1wB1yH3uCHbA8WIjSwR5MMesvS1tir5eT808tWDQ
+      0WXAdGmAaFrgV6FfdGJJZ8qx+q0iyaE54/10LDEdgWDvN18Nx9Jf/pSM9gSIPAwS
+      jCFeXpjXTDsvHjq/3BfEMc5fuyFsO6hSncCoY2aXJA6XG6K/qV/ll4djys6GTCDq
+      fU2eVWVk2yEM7YfvNocuaocyj+nd8ozDrS2HVtvBMRurjWreNF5zk5F11HaQN/D5
+      OfKj8abHZuwlVSqbdaf9mdV+7ENKU1cze82p2ZqwruPGrRFtbezxBBlgEMfzJX3i
+      kwa830ECgYEA8wDcoIcVPCAri+Kylwitxevfk2oZcSNqI8q9TAjYDXMfyWISbMt2
+      35lq9wVjKx34BSO+BY2HXLnl0sUBdfwWuO4IPzkQtILtwXDdszvAerGgjtZerKXb
+      CiLu9ZjpcvlcxPmlitp/WYvX7bJdVsBJQU1ks+5shQLOFv5N4nhG680CgYEA5ZRc
+      8gSp4tuSL+1zzBXjdsQfmwkbI6Mw3kZ8e97pBxRtbyH9TyYH3ryAGwOgwFsWuCOW
+      Zbqx6CIUr4R20FMBndqe3bPwpL35jdooFMSKaF/a9sDbX3BXYFeJjm2qR9sw8R1E
+      461+tuejK18j0DwnzuZHzQ3tT8uTG77ODUQCBDkCgYAxJO15sZgDzuW/pptDnEe4
+      jVlr8LswfF8M2gWqiOdY4P1+tszPH97snZRaXMaPg8ITGAVoDhVgFWB7XchL2i2m
+      PM2CK8JLH2eCBZdwlhb5OU8lVAlVlT1VMXduR/x+ehve4jYufL3gmD2VHsttrfmi
+      sUo6cW+U/to7IDcUJAsDyQKBgQCFQ1u4eJCMyNvQykr/Wm1REYMvIVgJlb7WJ6A2
+      3yvxGiBz9AzwFqlW16CdDbwQLE/Bz5aLspV2o+HSCFhXkPdNRAwXsU2ss0Ha35mI
+      hJW7BHk75rLwcWum1ulYLbw8PbXpIA5PAvSdA1Sp5m4JgAGzjeR72Ou59/eKkXVW
+      KfXpsQKBgG7Lk0TTaeMQ8KtTjp3rYrOCW2S6s6rSUcbTLog7hZELV2/foHftri4p
+      bgpHFZuzo7Xt40/6LvM9htBdY9pHtGpBmHnhOqL0dCRB6VSMUZ8wo9ZIANmCxsCI
+      S8TIR2w+Bbw6v3yDKwPF6t+86eQvz0/YHbsomgyVPVCcLPkjhBds
+      -----END RSA PRIVATE KEY-----
 
   blobstore:
     admin_users:
@@ -435,7 +633,6 @@ properties:
     secure_link:
       secret: PASSWORD
     tls:
-      port: 443
       cert: |+
         -----BEGIN CERTIFICATE-----
         MIIDQjCCAiqgAwIBAgIJANvIxLqHTfmZMA0GCSqGSIb3DQEBBQUAMEUxCzAJBgNV
@@ -516,20 +713,17 @@ properties:
     roles:
     - {name: ccadmin, password: PASSWORD, tag: admin}
     - {name: uaaadmin, password: PASSWORD, tag: admin}
-  dea_next:
-    advertise_interval_in_seconds: 5
-    heartbeat_interval_in_seconds: 10
-    memory_mb: 33996
   description: Cloud Foundry sponsored by Pivotal
   domain: REPLACE_WITH_SYSTEM_DOMAIN
   etcd:
-    machines: [10.0.16.104]
+    advertise_urls_dns_suffix: etcd.service.cf.internal
+    cluster:
+    - name: diego_z1
+      instances: 1
+    machines: ["etcd.service.cf.internal"]
     peer_require_ssl: false
     require_ssl: false
-    advertise_urls_dns_suffix: etcd.service.cf.internal
-  hm9000:
-    url: https://hm9000.REPLACE_WITH_SYSTEM_DOMAIN
-    port: 5155
+
   logger_endpoint:
     port: 4443
   loggregator:
@@ -603,6 +797,7 @@ properties:
         redirect-uri: https://servicesmgmt.REPLACE_WITH_SYSTEM_DOMAIN/auth/cloudfoundry/callback
         scope: openid,cloud_controller.read,cloud_controller.write
         secret: PASSWORD
+
     jwt:
       signing_key: |
         -----BEGIN RSA PRIVATE KEY-----
@@ -632,5 +827,100 @@ properties:
     ssl:
       port: -1
     url: https://uaa.REPLACE_WITH_SYSTEM_DOMAIN
+  capi:
+    nsync:
+      bbs:
+        ca_cert: ""
+        client_cert: ""
+        client_key: ""
+        require_ssl: false
+      cc:
+        base_url: https://api.REPLACE_WITH_SYSTEM_DOMAIN
+        basic_auth_password: PASSWORD
+      diego_privileged_containers: true
+    tps:
+      bbs:
+        ca_cert: ""
+        client_cert: ""
+        client_key: ""
+        require_ssl: false
+      cc:
+        base_url: https://api.REPLACE_WITH_SYSTEM_DOMAIN
+        basic_auth_password: PASSWORD
+      traffic_controller_url: wss://doppler.REPLACE_WITH_SYSTEM_DOMAIN:443 
+    tps_listener:
+      bbs:
+        ca_cert: ""
+        client_cert: ""
+        client_key: ""
+        require_ssl: false
+      cc:
+        base_url: https://api.REPLACE_WITH_SYSTEM_DOMAIN
+        basic_auth_password: PASSWORD
+    stager:
+      bbs:
+        ca_cert: ""
+        client_cert: ""
+        client_key: ""
+        require_ssl: false
+      cc:
+        base_url: https://api.REPLACE_WITH_SYSTEM_DOMAIN
+        basic_auth_password: PASSWORD
+  diego:
+    auctioneer:
+      bbs:
+        ca_cert: ""
+        client_cert: ""
+        client_key: ""
+        require_ssl: false
+    bbs:
+      active_key_label: active
+      encryption_keys:
+      - label: active
+        passphrase: PASSWORD
+      ca_cert: ""
+      etcd:
+        ca_cert: ""
+        client_cert: ""
+        client_key: ""
+        require_ssl: false
+      require_ssl: false
+      server_cert: ""
+      server_key: ""
+    converger:
+      bbs:
+        ca_cert: ""
+        client_cert: ""
+        client_key: ""
+        require_ssl: false
+    rep:
+      bbs:
+        ca_cert: ""
+        client_cert: ""
+        client_key: ""
+        require_ssl: false
+      preloaded_rootfses: ["cflinuxfs2:/var/vcap/packages/cflinuxfs2/rootfs"]
+    executor:
+      memory_capacity_mb: 30720
+      disk_capacity_mb: 163840
+    route_emitter:
+      bbs:
+        ca_cert: ""
+        client_cert: ""
+        client_key: ""
+        require_ssl: false
+      nats:
+        machines: [10.0.16.103]
+        password: PASSWORD
+        port: 4222
+        user: nats
+    ssl:
+      skip_cert_verify: true
+  garden:
+    graph_cleanup_threshold_in_mb: 0
+    persistent_image_list: ["/var/vcap/packages/cflinuxfs2/rootfs"]
+    deny_networks:
+    - 0.0.0.0/0
+
 # code_snippet cf-minimal-aws end
 # The previous line helps maintain current documentation at http://docs.cloudfoundry.org.

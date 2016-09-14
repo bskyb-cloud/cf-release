@@ -1,7 +1,7 @@
 # Introduction
 
 The `minimal-aws.yml` is an example of a minimalistic deployment of Cloud
-Foundry, including all crucial components for its basic funcionality. it allows
+Foundry, including all crucial components for its basic functionality. it allows
 you to deploy Cloud Foundry for educational purposes, so you can poke around and
 break things. 
 
@@ -10,10 +10,10 @@ it doesn't include features such as high availability and security.
 
 # Setup
 
-## Create MicroBOSH in AWS
-- http://docs.cloudfoundry.org/bosh/deploy-microbosh-to-aws.html
+## Deploy BOSH director in AWS
+- https://bosh.io/docs/init-aws.html
 
-##Update the microbosh Security Group to allow "cf logs" to work
+##Update the BOSH Security Group to allow "cf logs" to work
 - Click on "VPC" from the Amazon Web Services Dashboard
 - Click on "Security Groups" from the VPC Dashboard
 - Select the "bosh" Security Group
@@ -27,7 +27,7 @@ it doesn't include features such as high availability and security.
 - Click "Save"
 
 - Replace REPLACE_WITH_DIRECTOR_ID in the example manifest with the bosh director id (return by running "bosh status --uuid")
-- Replace REPLACE_WITH_BOSH_SECURITY_GROUP in the example manifest with the security group created for microbosh
+- Replace REPLACE_WITH_BOSH_SECURITY_GROUP in the example manifest with the security group created for BOSH
 
 ## Create a NAT Machine in the bosh subnet
 - Click on "EC2" from the Amazon Web Services Dashboard
@@ -38,8 +38,8 @@ it doesn't include features such as high availability and security.
 - Select "m1.small"
 - Click "Next: Configure Instance Details"
 - Fill in
-  - Network: microbosh
-  - Subnet: microbosh
+  - Network: bosh
+  - Subnet: bosh
   - Auto-assign Public IP: Enable
 - Click "Next: Add Storage"
   - If asked to choose boot volume for instance, select the "Continue with Magnetic..." option.
@@ -68,13 +68,13 @@ it doesn't include features such as high availability and security.
 - Click "Create Subnet"
 - Fill in
   - Name tag: cf
-  - VPC: microbosh
-  - Availability Zone: Pick the same Availability Zone as the microbosh Subnet
+  - VPC: bosh
+  - Availability Zone: Pick the same Availability Zone as the bosh Subnet
     - Replace REPLACE_WITH_AZ in the example manifest with the Availability Zone you chose
   - CIDR block: 10.0.16.0/24
   - Click "Yes, Create"
 - Replace REPLACE_WITH_PRIVATE_SUBNET_ID in the example manifest with the Subnet ID for the cf Subnet
-- Replace REPLACE_WITH_PUBLIC_SUBNET_ID in the example manifest with the Subnet ID for the microbosh Subnet
+- Replace REPLACE_WITH_PUBLIC_SUBNET_ID in the example manifest with the Subnet ID for the bosh Subnet
 - Select the cf Subnet from the Subnet list
 - Click the name of the "Route table:" to view the route tables
 - Select the route table from the list
@@ -132,42 +132,19 @@ Generate a SSL certificate for your System Domain
 - Run "openssl x509 -req -in cf.csr -signkey cf.key -out cf.crt"
 - Run "cat cf.crt && cat cf.key" and replace REPLACE_WITH_SSL_CERT_AND_KEY with this value.
 
-## Create certs for Consul agents to communicate over SSL
-
-The consul agents in `consul-release` (a sub-module of `cf-release`) must
-now communicate over SSL, so they'll have to be configured with SSL
-certificates. You can follow instructions for generating these certs
-[here](https://github.com/cloudfoundry-incubator/consul-release#generating-keys-and-certificates).
-
-Once you've generated the 3 certificates and 2 keys needed, paste them into your manifest:
-
-```yaml
-properties:
-  # ...
-  consul:
-    # ...
-    encrypt_keys:
-    - PASSWORD
-    ca_cert: REPLACE_WITH_CA_CERT          # Replace with consul-certs/server-ca.crt
-    server_cert: REPLACE_WITH_SERVER_CERT  # Replace with consul-certs/server.crt
-    agent_cert: REPLACE_WITH_AGENT_CERT    # Replace with consul-certs/agent.crt
-    server_key: REPLACE_WITH_SERVER_KEY    # Replace with consul-certs/server.key
-    agent_key: REPLACE_WITH_AGENT_KEY      # Replace with consul-certs/agent.key
-```
-
-## Create and Deploy CF Release
+## Create and Deploy Cloud Foundry
 Download a copy of the latest bosh stemcell.
 
 ```sh
 bosh public stemcells
-bosh download public stemcell light-bosh-stemcell-[GREATEST_NUMBER]-aws-xen-ubuntu-trusty-go_agent.tgz
+bosh download public stemcell light-bosh-stemcell-[GREATEST_NUMBER]-aws-xen-hvm-ubuntu-trusty-go_agent.tgz
 
 ```
 
 Upload the new stemcell.
 
 ```sh
-bosh upload stemcell light-bosh-stemcell-[GREATEST_NUMBER]-aws-xen-ubuntu-trusty-go_agent.tgz
+bosh upload stemcell light-bosh-stemcell-[GREATEST_NUMBER]-aws-xen-hvm-ubuntu-trusty-go_agent.tgz
 ```
 
 Replace REPLACE_WITH_BOSH_STEMCELL_VERSION in the example manifest with the BOSH stemcell version you downloaded above
@@ -175,10 +152,11 @@ Replace REPLACE_WITH_BOSH_STEMCELL_VERSION in the example manifest with the BOSH
 Upload the latest stable version of Cloud Foundry.
 
 ```sh
-git clone https://github.com/cloudfoundry/cf-release.git
-cd cf-release
-
-bosh upload release releases/cf-GREATEST_NUMBER.yml
+bosh upload release https://bosh.io/d/github.com/cloudfoundry/cf-release
+bosh upload release https://bosh.io/d/github.com/cloudfoundry/diego-release
+bosh upload release https://bosh.io/d/github.com/cloudfoundry/cflinuxfs2-rootfs-release
+bosh upload release https://bosh.io/d/github.com/cloudfoundry-incubator/garden-linux-release
+bosh upload release https://bosh.io/d/github.com/cloudfoundry-incubator/etcd-release
 
 bosh deployment LOCATION_OF_YOUR_MODIFIED_EXAMPLE_MANIFEST
 bosh deploy
@@ -205,7 +183,7 @@ or perform some other actions. To do this you first need to get a list of vms wi
 acccess your machines with the following command:
 
 ```sh
-bosh ssh VM_FROM_BOSH_VMS_COMMAND/INSTANCE_NUMBER --gateway_host YOUR_PUBLIC_MICROBOSH_ADDRESS --gateway_user vcap
+bosh ssh VM_FROM_BOSH_VMS_COMMAND/INSTANCE_NUMBER --gateway_host YOUR_PUBLIC_BOSH_ADDRESS --gateway_user vcap
 ```
 
 Note that this command will ask you to setup the password for sudo during the login processs.

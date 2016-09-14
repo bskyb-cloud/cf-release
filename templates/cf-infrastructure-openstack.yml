@@ -72,6 +72,9 @@ properties:
       - tag: admin
         name: uaaadmin
         password: (( merge ))
+      - tag: admin
+        name: diego
+        password: (( merge ))
     databases:
       - tag: cc
         name: ccdb
@@ -79,6 +82,9 @@ properties:
       - tag: uaa
         name: uaadb
         citext: true
+      - tag: diego
+        name: diego
+        citext: false
     collect_statement_statistics: null
     additional_config: (( merge || nil ))
 
@@ -189,25 +195,25 @@ jobs:
     instances: 0
     networks:
       - name: cf2
-        static_ips: []
+        static_ips: (( static_ips(2) ))
 
   - name: router_z2
     instances: 0
     networks:
       - name: cf2
-        static_ips: []
+        static_ips: (( static_ips(5) ))
 
   - name: etcd_z2
     instances: 0
     networks:
       - name: cf2
-        static_ips: []
+        static_ips: (( static_ips(8, 9, 10) ))
 
   - name: consul_z2
     instances: 0
     networks:
       - name: cf2
-        static_ips: []
+        static_ips: (( static_ips(12, 13, 14) ))
 
   - name: loggregator_z2
     instances: 0

@@ -4,7 +4,7 @@ name: acceptance-tests
 description: "The acceptance tests errand can be configured to run full acceptance test suite against a specific Cloud Foundry API endpoint. Consider running smoke tests errand for a smaller set of tests."
 
 packages:
-  - golang1.4
+  - golang1.6
   - cli
   - acceptance-tests
 
@@ -30,15 +30,12 @@ properties:
   acceptance_tests.verbose:
     default: false
     description: Whether to pass the -v flag to cf-acceptance-tests
+  acceptance_tests.include_apps:
+    default: true
+    description: Flag to include the apps test suite.
   acceptance_tests.include_sso:
     default: false
     description: Flag to include the services tests that integrate with SSO.
-  acceptance_tests.include_operator:
-    default: false
-    description: Flag to include the operator tests which may modify the global state of an Elastic Runtime deployment.
-  acceptance_tests.include_logging:
-    default: false
-    description: Flag to include the logging test suite.
   acceptance_tests.include_security_groups:
     default: false
     description: Flag to include the security groups test suite.
@@ -57,6 +54,9 @@ properties:
   acceptance_tests.include_route_services:
     default: false
     description: Flag to include the route services tests. Diego must be deployed for these tests to pass.
+  acceptance_tests.include_routing:
+    default: true
+    description: Flag to include the routing tests. Diego must be deployed for these tests to pass.
   acceptance_tests.include_diego_docker:
     default: false
     description: Flag to include tests related to running Docker apps on Diego. Diego must be deployed and the CC API docker_diego feature flag must be enabled for these tests to pass.
@@ -69,9 +69,14 @@ properties:
   acceptance_tests.include_backend_compatibility:
     default: false
     description: Flag to inlude whether we check DEA/Diego interoperability
+  acceptance_tests.include_detect:
+    default: true
+    description: Flag to run tests in the detect suite
   acceptance_tests.use_http:
     default: false
     description: Flag for using HTTP when making api and application requests rather than the default HTTPS
+  acceptance_tests.include_privileged_container_support:
+    description: Flag for running tests that depend on privileged container support being enabled in your Cloud Foundry.
   acceptance_tests.skip_regex:
     description: Regex for tests that should be skipped
   acceptance_tests.default_timeout:

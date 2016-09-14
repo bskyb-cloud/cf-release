@@ -220,7 +220,6 @@ jobs:
 
 properties:
   <<: (( merge ))
-  domain: (( jobs.ha_proxy_z1.networks.cf1.static_ips.[0] ".xip.io" ))
   system_domain_organization: pivotal
 
   ccdb:
@@ -260,6 +259,9 @@ properties:
       - tag: admin
         name: uaaadmin
         password: admin
+      - tag: admin
+        name: diego
+        password: admin
     databases:
       - tag: cc
         name: ccdb
@@ -267,5 +269,8 @@ properties:
       - tag: uaa
         name: uaadb
         citext: true
+      - tag: diego
+        name: diego
+        citext: false
     collect_statement_statistics: null
     additional_config: (( merge || nil ))
