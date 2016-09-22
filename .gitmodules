@@ -36,4 +36,4 @@
 	url = https://github.com/nimbus-cloud/routing-release
 [submodule "src/postgres-release"]
 	path = src/postgres-release
-	url = https://github.com/cloudfoundry/postgres-release.git
+	url = https://github.com/nimbus-cloud/postgres-release.git
