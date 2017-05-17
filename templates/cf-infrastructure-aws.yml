@@ -43,9 +43,7 @@ properties:
       fog_connection: (( meta.fog_config ))
 
   dea_next:
-    deny_networks:
-      - 169.254.0.0/16 # AWS Status
-      - 10.10.0.0/16
+    deny_networks: (( merge || ["169.254.0.0/16", "10.10.0.0/16"] )) # 169.254.0.0 is for AWS Status
     allow_networks: (( merge || ["10.10.0.2/32"] )) # Amazon DNS
 
 compilation:
@@ -92,7 +90,7 @@ resource_pools:
 
   - name: large_z1
     cloud_properties:
-      instance_type: m3.medium
+      instance_type: m3.large
       ephemeral_disk:
         size: 65_536
         type: gp2
@@ -100,7 +98,7 @@ resource_pools:
 
   - name: large_z2
     cloud_properties:
-      instance_type: m3.medium
+      instance_type: m3.large
       ephemeral_disk:
         size: 65_536
         type: gp2
@@ -130,6 +128,7 @@ resource_pools:
         type: gp2
       availability_zone: (( meta.zones.z1 ))
       elbs: (( merge || ["cfrouter"] ))
+      <<: (( merge ))
 
   - name: router_z2
     cloud_properties:
@@ -139,6 +138,7 @@ resource_pools:
         type: gp2
       availability_zone: (( meta.zones.z2 ))
       elbs: (( merge || ["cfrouter"] ))
+      <<: (( merge ))
 
   - name: small_errand
     cloud_properties:

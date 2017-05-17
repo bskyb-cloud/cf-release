@@ -44,21 +44,6 @@ jobs:
       metron_agent:
         zone: z2
 
-  - name: ha_proxy_z1
-    templates: (( merge || meta.ha_proxy_templates ))
-    instances: 0
-    resource_pool: router_z1
-    default_networks:
-      - name: cf1
-    networks: (( merge || default_networks ))
-    properties:
-      ha_proxy:
-      router:
-        servers: (( merge || jobs.router_z1.networks.cf1.static_ips jobs.router_z2.networks.cf2.static_ips || nil ))
-      metron_agent:
-        zone: z1
-    update: (( merge || empty_hash ))
-
   - name: nats_z1
     templates: (( merge || meta.nats_templates ))
     instances: 1
@@ -87,7 +72,7 @@ jobs:
     templates: (( merge || meta.etcd_templates ))
     instances: 2
     persistent_disk: 10024
-    resource_pool: medium_z1
+    resource_pool: large_z1
     default_networks:
       - name: cf1
     networks: (( merge || default_networks ))
@@ -107,7 +92,7 @@ jobs:
     templates: (( merge || meta.etcd_templates ))
     instances: 1
     persistent_disk: 10024
-    resource_pool: medium_z2
+    resource_pool: large_z2
     default_networks:
       - name: cf2
     networks: (( merge || default_networks ))
@@ -266,7 +251,7 @@ jobs:
       nfs_server: (( meta.nfs_server ))
     update: (( merge || empty_hash ))
 
-  - name: clock_global
+  - name: clock_z1
     templates: (( merge || meta.clock_templates ))
     instances: 1
     resource_pool: medium_z1
@@ -291,6 +276,19 @@ jobs:
       metron_agent:
         zone: z1
       nfs_server: (( meta.nfs_server ))
+    update: (( merge || empty_hash ))
+
+  - name: clock_z2
+    templates: (( merge || meta.clock_templates ))
+    instances: 1
+    resource_pool: medium_z2
+    persistent_disk: 0
+    default_networks:
+      - name: cf2
+    networks: (( merge || default_networks ))
+    properties:
+      metron_agent:
+        zone: z2
     update: (( merge || empty_hash ))
 
   - name: api_worker_z2
@@ -427,10 +425,18 @@ jobs:
       - name: cf1
     networks: (( merge || default_networks ))
     properties:
+      <<: (( merge ))
       doppler:
         zone: z1
       metron_agent:
         zone: z1
+      consul:
+        agent:
+          services:
+            doppler:
+              name: doppler
+              tags:
+              - z1
     update: (( merge || empty_hash ))
 
   - name: doppler_z2
@@ -441,10 +447,18 @@ jobs:
       - name: cf2
     networks: (( merge || default_networks ))
     properties:
+      <<: (( merge ))
       doppler:
         zone: z2
       metron_agent:
         zone: z2
+      consul:
+        agent:
+          services:
+            doppler:
+              name: doppler
+              tags:
+              - z2
     update: (( merge || empty_hash ))
 
   - name: loggregator_trafficcontroller_z1
@@ -455,6 +469,10 @@ jobs:
       - name: cf1
     networks: (( merge || default_networks ))
     properties:
+      <<: (( merge ))
+      loggregator:
+        uaa:
+          client_secret: (( .properties.uaa.clients.doppler.secret ))
       traffic_controller:
         zone: z1
       consul:
@@ -465,7 +483,9 @@ jobs:
         zone: z1
       route_registrar:
         routes: (( merge || meta.loggregator_trafficcontroller_routes ))
-    update: (( merge || empty_hash ))
+    update:
+      serial: true
+      max_in_flight: 1
 
   - name: loggregator_trafficcontroller_z2
     templates: (( merge || meta.loggregator_trafficcontroller_templates ))
@@ -475,6 +495,10 @@ jobs:
       - name: cf2
     networks: (( merge || default_networks ))
     properties:
+      <<: (( merge ))
+      loggregator:
+        uaa:
+          client_secret: (( .properties.uaa.clients.doppler.secret ))
       traffic_controller:
         zone: z2
       consul:
@@ -485,7 +509,9 @@ jobs:
         zone: z2
       route_registrar:
         routes: (( merge || meta.loggregator_trafficcontroller_routes ))
-    update: (( merge || empty_hash ))
+    update:
+      serial: true
+      max_in_flight: 1
 
   - name: router_z1
     templates: (( merge || meta.router_templates ))
@@ -501,6 +527,9 @@ jobs:
             gorouter: {}
       metron_agent:
         zone: z1
+      router:
+        isolation_segments: (( merge || [] ))
+        routing_table_sharding_mode: all
     update: (( merge || empty_hash ))
 
   - name: router_z2
@@ -517,6 +546,24 @@ jobs:
             gorouter: {}
       metron_agent:
         zone: z2
+      router:
+        isolation_segments: (( merge || [] ))
+        routing_table_sharding_mode: all
+    update: (( merge || empty_hash ))
+
+  - name: ha_proxy_z1
+    templates: (( merge || meta.ha_proxy_templates ))
+    instances: 0
+    resource_pool: router_z1
+    default_networks:
+      - name: cf1
+    networks: (( merge || default_networks ))
+    properties:
+      ha_proxy:
+      router:
+        servers: (( merge || jobs.router_z1.networks.cf1.static_ips jobs.router_z2.networks.cf2.static_ips || nil ))
+      metron_agent:
+        zone: z1
     update: (( merge || empty_hash ))
 
   - name: acceptance_tests
@@ -560,6 +607,7 @@ properties:
       ca_cert: ~
 
   consul:
+    dns_config: (( merge || nil ))
     agent:
       domain: cf.internal
       log_level: (( merge || nil ))
@@ -639,7 +687,7 @@ properties:
     directory_server_protocol: https
     evacuation_bail_out_time_in_seconds: 600
     logging_level: debug
-    staging_disk_limit_mb: 6144
+    staging_disk_limit_mb: 4096
     staging_memory_limit_mb: 1024
     default_health_check_timeout: 60
     advertise_interval_in_seconds: 5
@@ -662,7 +710,23 @@ properties:
     blacklisted_syslog_ranges: ~
     outgoing_dropsonde_port: 8081
     tls:
-      ca_cert: ~
+      ca_cert: (( merge ))
+      doppler:
+        cert: (( merge ))
+        key: (( merge ))
+      trafficcontroller:
+        cert: (( merge ))
+        key: (( merge ))
+      metron:
+        cert: (( merge ))
+        key: (( merge ))
+      syslogdrainbinder:
+        cert: (( merge ))
+        key: (( merge ))
+      statsd_injector:
+        cert: (( merge ))
+        key: (( merge ))
+
     etcd:
       machines: [(( .properties.etcd.advertise_urls_dns_suffix ))]
       require_ssl: (( .properties.etcd.require_ssl ))
@@ -679,6 +743,7 @@ properties:
     blacklisted_syslog_ranges: ~
     unmarshaller_count: (( merge || 5 ))
     port: (( merge || 4443 ))
+    outgoing_port: (( merge || 8081 ))
     tls:
       server_cert: ~
       server_key: ~
@@ -691,11 +756,12 @@ properties:
   doppler_endpoint:
     shared_secret: (( .properties.loggregator_endpoint.shared_secret ))
 
+  statsd_injector:
+    deployment: (( meta.environment ))
+
   metron_agent:
     deployment: (( meta.environment ))
     preferred_protocol: ~
-    enable_buffer: ~
-    buffer_size: ~
     protocols: ~
     etcd:
       client_cert: (( .properties.etcd.client_cert ))
@@ -708,7 +774,6 @@ properties:
     shared_secret: (( .properties.loggregator_endpoint.shared_secret ))
 
   traffic_controller:
-    outgoing_port: 8080
     zone: (( merge || nil ))
     disable_access_control: (( merge || nil ))
     security_event_logging:
@@ -725,6 +790,26 @@ properties:
       client_key: (( .properties.etcd.client_key ))
 
   cc:
+    diego:
+      use_privileged_containers_for_running: (( merge || nil ))
+      use_privileged_containers_for_staging: (( merge || nil ))
+      insecure_docker_registry_list: (( merge || nil ))
+      pid_limit: (( merge || nil ))
+      temporary_local_staging: (( merge || nil ))
+      temporary_local_tasks: (( merge || nil ))
+      temporary_local_apps: (( merge || nil ))
+      temporary_local_sync: (( merge || nil ))
+      temporary_local_tps: (( merge || nil ))
+      temporary_cc_uploader_mtls: (( merge || nil ))
+      temporary_droplet_download_mtls: (( merge || nil ))
+      bbs:
+        url: (( merge || nil ))
+    tls_port: (( merge || nil ))
+    mutual_tls:
+      ca_cert: (( merge ))
+      public_cert: (( merge ))
+      private_key: (( merge ))
+
     jobs:
       global:
         timeout_in_seconds: 14400 # 4 hours
@@ -757,6 +842,7 @@ properties:
     users_can_select_backend: true
     default_to_diego_backend: false
     allow_app_ssh_access: true
+    default_app_ssh_access: (( merge || nil ))
     default_app_memory: 1024
     default_app_disk_in_mb: 1024
     maximum_app_disk_in_mb: 2048
@@ -848,7 +934,7 @@ properties:
       - name: staticfile_buildpack
         package: staticfile-buildpack
       - name: java_buildpack
-        package: buildpack_java
+        package: java-buildpack
       - name: ruby_buildpack
         package: ruby-buildpack
       - name: nodejs_buildpack
@@ -861,6 +947,8 @@ properties:
         package: php-buildpack
       - name: binary_buildpack
         package: binary-buildpack
+      - name: dotnet_core_buildpack
+        package: dotnet-core-buildpack
 
     install_buildpacks: (( system_buildpacks user_buildpacks ))
 
@@ -899,6 +987,8 @@ properties:
     security_event_logging:
       enabled: (( merge || nil ))
 
+    rate_limiter: (( merge || nil ))
+
   ccdb: (( merge ))
 
   ha_proxy: (( merge || nil ))
@@ -919,7 +1009,6 @@ properties:
       client_key: (( .properties.etcd.client_key ))
 
   login:
-    home_redirect: ~
     branding: (( merge || nil ))
     enabled: true
     analytics:
@@ -930,17 +1019,14 @@ properties:
     protocol: ~
     brand: oss
     asset_base_url: ~
-    uaa_base: ~
     self_service_links_enabled: ~
-    signups_enabled: ~
-    invitations_enabled: ~
-    spring_profiles: ~
     messages: ~
 
     notifications:
       url: ~
 
     smtp:
+      <<: (( merge || nil ))
       host: ~
       port: ~
       user: ~
@@ -952,14 +1038,12 @@ properties:
 
     logout: ~
 
-    tiles: ~
-
     saml: ~
 
     restricted_ips_regex: ~
 
   uaa:
-    ca_cert: (( merge || nil ))
+    ca_cert: (( merge ))
     catalina_opts: ~
     url: (( "https://uaa." system_domain ))
     issuer: (( url ))
@@ -974,9 +1058,9 @@ properties:
       groups: ~
 
     ssl:
-      port: -1
-    sslCertificate: ~
-    sslPrivateKey: ~
+      port: 8443
+    sslCertificate: (( merge ))
+    sslPrivateKey: (( merge ))
 
     jwt: (( merge ))
 
@@ -991,7 +1075,7 @@ properties:
         lockoutAfterFailures: ~
         countFailuresWithinSeconds: ~
         lockoutPeriodSeconds: ~
-        
+
     password:
       policy:
         minLength: ~
@@ -1006,9 +1090,26 @@ properties:
 
     newrelic: ~
     port: 8080
-    spring_profiles: ~
 
-    user: ~
+    user:
+      <<: (( merge || nil ))
+      authorities:
+        - openid
+        - scim.me
+        - cloud_controller.read
+        - cloud_controller.write
+        - cloud_controller_service_permissions.read
+        - password.write
+        - uaa.user
+        - approvals.me
+        - oauth.approvals
+        - notification_preferences.read
+        - notification_preferences.write
+        - profile
+        - roles
+        - user_attributes
+        - cloud_controller.user
+        - actuator.read
     clients:
       <<: (( merge || nil ))
       login:
@@ -1022,10 +1123,10 @@ properties:
       cf:
         override: true
         authorized-grant-types: password,refresh_token
-        scope: cloud_controller.read,cloud_controller.write,openid,password.write,cloud_controller.admin,cloud_controller.admin_read_only,scim.read,scim.write,doppler.firehose,uaa.user,routing.router_groups.read,routing.router_groups.write
+        scope: cloud_controller.read,cloud_controller.write,openid,password.write,cloud_controller.admin,cloud_controller.admin_read_only,cloud_controller.global_auditor,scim.read,scim.write,doppler.firehose,uaa.user,routing.router_groups.read,routing.router_groups.write
         authorities: uaa.none
-        access-token-validity: 600
-        refresh-token-validity: 2592000
+        access-token-validity: 600 # 10 mins
+        refresh-token-validity: 604800 # 7 days
       notifications:
         secret: (( merge ))
         authorities: cloud_controller.admin,scim.read
@@ -1034,6 +1135,7 @@ properties:
         override: true
         authorities: uaa.resource
         secret: (( merge ))
+        authorized-grant-types: client_credentials
       cloud_controller_username_lookup:
         authorities: scim.userids
         secret: (( merge ))
@@ -1047,17 +1149,22 @@ properties:
         authorized-grant-types: client_credentials,refresh_token
         secret: (( merge ))
       tcp_emitter:
-        authorities: routing.routes.write,routing.routes.read,routing.router_groups.read
+        authorities: routing.routes.write,routing.routes.read
         authorized-grant-types: client_credentials,refresh_token
         secret: (( merge ))
       tcp_router:
-        authorities: routing.routes.read,routing.router_groups.read
+        authorities: routing.routes.read
         authorized-grant-types: client_credentials,refresh_token
         secret: (( merge ))
+      cc-service-dashboards:
+        secret: (( merge ))
+        scope: openid,cloud_controller_service_permissions.read
+        authorities: clients.read,clients.write,clients.admin
+        authorized-grant-types: authorization_code,client_credentials
+
+    token_endpoint: (( merge || nil ))
 
     database: ~
-
-    restricted_ips_regex: 10\.\d{1,3}\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|169\.254\.\d{1,3}\.\d{1,3}|127\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.1[6-9]{1}\.\d{1,3}\.\d{1,3}|172\.2[0-9]{1}\.\d{1,3}\.\d{1,3}|172\.3[0-1]{1}\.\d{1,3}\.\d{1,3}
 
     zones:
       internal:
@@ -1071,11 +1178,14 @@ properties:
     logging_level: (( merge || nil ))
     suspend_pruning_if_nats_unavailable: (( merge || nil ))
     enable_proxy: (( merge || nil ))
+    force_forwarded_proto_https: (( merge || nil ))
     enable_ssl: (( merge || nil ))
     ssl_cert: (( merge || nil ))
     ssl_key: (( merge || nil ))
     cipher_suites: (( merge || nil ))
     requested_route_registration_interval_in_seconds: (( merge || nil ))
+    load_balancer_healthy_threshold: (( merge || nil ))
+    balancing_algorithm: (( merge || nil ))
     ssl_skip_validation: (( merge || nil ))
     port: (( merge || nil ))
     status:
@@ -1087,14 +1197,20 @@ properties:
     route_services_secret_decrypt_only: (( merge || nil ))
     route_services_timeout: (( merge || nil ))
     route_services_recommend_https: (( merge || nil ))
+    max_idle_connections: (( merge || nil ))
+    tracing:
+      enable_zipkin: (( merge || nil ))
     logrotate: (( merge || nil ))
     extra_headers_to_log: (( merge || nil ))
     debug_address: (( merge || nil ))
     drain_wait: (( merge || nil ))
+    healthcheck_user_agent: (( merge || nil ))
     enable_access_log_streaming: (( merge || nil ))
 
   routing_api:
     enabled: (( merge || nil ))
+    uri: (( merge || nil ))
+    port: (( merge || nil ))
 
   syslog_daemon_config: ~
 
@@ -1212,16 +1328,20 @@ meta:
   consul_release_name: (( releases.consul.name || "cf" ))
   etcd_release_name: (( releases.etcd.name || "cf" ))
   postgres_release_name: (( releases.postgres.name || "cf" ))
-  java_buildpack_release_name: (( releases.java-buildpack-release.name || "cf" ))
-  go_buildpack_release_name: (( releases.go-buildpack-release.name || "cf" ))
-  binary_buildpack_release_name: (( releases.binary-buildpack-release.name || "cf" ))
-  nodejs_buildpack_release_name: (( releases.nodejs-buildpack-release.name || "cf" ))
-  ruby_buildpack_release_name: (( releases.ruby-buildpack-release.name || "cf" ))
-  php_buildpack_release_name: (( releases.php-buildpack-release.name || "cf" ))
-  python_buildpack_release_name: (( releases.python-buildpack-release.name || "cf" ))
-  staticfile_buildpack_release_name: (( releases.staticfile-buildpack-release.name || "cf" ))
+  java_buildpack_release_name: (( releases.java-buildpack.name || "cf" ))
+  java_offline_buildpack_release_name: (( releases.java-offline-buildpack.name || "cf" ))
+  go_buildpack_release_name: (( releases.go-buildpack.name || "cf" ))
+  binary_buildpack_release_name: (( releases.binary-buildpack.name || "cf" ))
+  nodejs_buildpack_release_name: (( releases.nodejs-buildpack.name || "cf" ))
+  ruby_buildpack_release_name: (( releases.ruby-buildpack.name || "cf" ))
+  php_buildpack_release_name: (( releases.php-buildpack.name || "cf" ))
+  python_buildpack_release_name: (( releases.python-buildpack.name || "cf" ))
+  staticfile_buildpack_release_name: (( releases.staticfile-buildpack.name || "cf" ))
+  dotnet_core_buildpack_release_name: (( releases.dotnet-core-buildpack.name || "cf" ))
   loggregator_release_name: (( releases.loggregator.name || "cf" ))
+  statsd_injector_release_name: (( releases.statsd-injector.name || "cf" ))
   uaa_release_name: (( releases.uaa.name || "cf" ))
+  routing_release_name: (( releases.routing.name || "cf" ))
 
   consul_servers: (( merge || jobs.consul_z1.networks.cf1.static_ips jobs.consul_z2.networks.cf2.static_ips ))
 
@@ -1248,11 +1368,12 @@ meta:
 
   api_templates:
   - name: consul_agent
+    consumes: {consul: nil}
     release: (( meta.consul_release_name ))
   - name: java-buildpack
     release: (( meta.java_buildpack_release_name ))
   - name: java-offline-buildpack
-    release: (( meta.java_buildpack_release_name ))
+    release: (( meta.java_offline_buildpack_release_name ))
   - name: go-buildpack
     release: (( meta.go_buildpack_release_name ))
   - name: binary-buildpack
@@ -1267,40 +1388,50 @@ meta:
     release: (( meta.python_buildpack_release_name ))
   - name: staticfile-buildpack
     release: (( meta.staticfile_buildpack_release_name ))
+  - name: dotnet-core-buildpack
+    release: (( meta.dotnet_core_buildpack_release_name ))
   - name: cloud_controller_ng
     release: (( meta.capi_release_name ))
+    consumes: {nats: nil}
   - name: metron_agent
     release: (( meta.loggregator_release_name ))
-  - name: statsd-injector
-    release: (( meta.loggregator_release_name ))
+  - name: statsd_injector
+    release: (( meta.statsd_injector_release_name ))
   - name: route_registrar
-    release: (( meta.cf_release_name ))
+    release: (( meta.routing_release_name ))
+    consumes: {nats: nil}
 
   api_worker_templates:
   - name: consul_agent
     release: (( meta.consul_release_name ))
+    consumes: {consul: nil}
   - name: cloud_controller_worker
     release: (( meta.capi_release_name ))
+    consumes: {nats: nil}
   - name: metron_agent
     release: (( meta.loggregator_release_name ))
 
   clock_templates:
   - name: consul_agent
     release: (( meta.consul_release_name ))
+    consumes: {consul: nil}
   - name: cloud_controller_clock
     release: (( meta.capi_release_name ))
+    consumes: {nats: nil}
   - name: metron_agent
     release: (( meta.loggregator_release_name ))
 
   consul_templates:
   - name: consul_agent
     release: (( meta.consul_release_name ))
+    consumes: {consul: nil}
   - name: metron_agent
     release: (( meta.loggregator_release_name ))
 
   dea_templates:
   - name: consul_agent
     release: (( meta.consul_release_name ))
+    consumes: {consul: nil}
   - name: dea_next
     release: (( meta.cf_release_name ))
   - name: dea_logging_agent
@@ -1311,8 +1442,10 @@ meta:
   etcd_templates:
   - name: consul_agent
     release: (( meta.consul_release_name ))
+    consumes: {consul: nil}
   - name: etcd
     release: (( meta.etcd_release_name ))
+    consumes: {etcd: nil}
   - name: etcd_metrics_server
     release: (( meta.etcd_release_name ))
   - name: metron_agent
@@ -1321,8 +1454,11 @@ meta:
   ha_proxy_templates:
   - name: consul_agent
     release: (( meta.consul_release_name ))
+    consumes: {consul: nil}
   - name: haproxy
     release: (( meta.cf_release_name ))
+    consumes: {ssh_proxy: nil}
+    consumes: {router: nil}
   - name: metron_agent
     release: (( meta.loggregator_release_name ))
 
@@ -1338,16 +1474,19 @@ meta:
   hm9000_templates:
   - name: consul_agent
     release: (( meta.consul_release_name ))
+    consumes: {consul: nil}
   - name: hm9000
     release: (( meta.cf_release_name ))
   - name: metron_agent
     release: (( meta.loggregator_release_name ))
   - name: route_registrar
-    release: (( meta.cf_release_name ))
+    release: (( meta.routing_release_name ))
+    consumes: {nats: nil}
 
   loggregator_templates:
   - name: consul_agent
     release: (( meta.consul_release_name ))
+    consumes: {consul: nil}
   - name: doppler
     release: (( meta.loggregator_release_name ))
   - name: syslog_drain_binder
@@ -1361,25 +1500,24 @@ meta:
     registration_interval: 20s
     uris:
     - (( "doppler." .properties.system_domain ))
-  - name: loggregator
-    port: (( .properties.traffic_controller.outgoing_port ))
-    registration_interval: 20s
-    uris:
-    - (( "loggregator." .properties.system_domain ))
 
   loggregator_trafficcontroller_templates:
   - name: consul_agent
     release: (( meta.consul_release_name ))
+    consumes: {consul: nil}
   - name: loggregator_trafficcontroller
     release: (( meta.loggregator_release_name ))
+    consumes: {doppler: nil}
   - name: metron_agent
     release: (( meta.loggregator_release_name ))
   - name: route_registrar
-    release: (( meta.cf_release_name ))
+    release: (( meta.routing_release_name ))
+    consumes: {nats: nil}
 
   nats_templates:
   - name: consul_agent
     release: (( meta.consul_release_name ))
+    consumes: {consul: nil}
   - name: nats
     consumes: {nats: nil}
     release: (( meta.cf_release_name ))
@@ -1400,16 +1538,19 @@ meta:
   blobstore_templates:
   - name: consul_agent
     release: (( meta.consul_release_name ))
+    consumes: {consul: nil}
   - name: metron_agent
     release: (( meta.loggregator_release_name ))
   - name: blobstore
     release: (( meta.capi_release_name ))
   - name: route_registrar
-    release: (( meta.cf_release_name ))
+    release: (( meta.routing_release_name ))
+    consumes: {nats: nil}
 
   nfs_templates:
   - name: consul_agent
     release: (( meta.consul_release_name ))
+    consumes: {consul: nil}
   - name: debian_nfs_server
     release: (( meta.capi_release_name ))
   - name: metron_agent
@@ -1417,11 +1558,13 @@ meta:
   - name: blobstore
     release: (( meta.capi_release_name ))
   - name: route_registrar
-    release: (( meta.cf_release_name ))
+    release: (( meta.routing_release_name ))
+    consumes: {nats: nil}
 
   postgres_templates:
   - name: consul_agent
     release: (( meta.consul_release_name ))
+    consumes: {consul: nil}
   - name: postgres
     release: (( meta.postgres_release_name ))
   - name: metron_agent
@@ -1430,14 +1573,17 @@ meta:
   router_templates:
   - name: consul_agent
     release: (( meta.consul_release_name ))
+    consumes: {consul: nil}
   - name: gorouter
-    release: (( meta.cf_release_name ))
+    release: (( meta.routing_release_name ))
+    consumes: {nats: nil}
   - name: metron_agent
     release: (( meta.loggregator_release_name ))
 
   stats_templates:
   - name: consul_agent
     release: (( meta.consul_release_name ))
+    consumes: {consul: nil}
   - name: collector
     release: (( meta.cf_release_name ))
   - name: metron_agent
@@ -1461,14 +1607,17 @@ meta:
   uaa_templates:
   - name: consul_agent
     release: (( meta.consul_release_name ))
+    consumes: {consul: nil}
   - name: uaa
     release: (( meta.uaa_release_name ))
+    consumes: {router: nil}
   - name: metron_agent
     release: (( meta.loggregator_release_name ))
   - name: route_registrar
-    release: (( meta.cf_release_name ))
-  - name: statsd-injector
-    release: (( meta.loggregator_release_name ))
+    release: (( meta.routing_release_name ))
+    consumes: {nats: nil}
+  - name: statsd_injector
+    release: (( meta.statsd_injector_release_name ))
 
   default_quota_definitions:
     default:

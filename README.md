@@ -6,7 +6,7 @@ This repository contains the Cloud Foundry source code. Cloud Foundry is deploye
 
 * [Documentation](http://docs.cloudfoundry.org/)
 * [Release Notes](https://github.com/cloudfoundry/cf-release/releases)
-* [CI](https://runtime.ci.cf-app.com/pipelines/cf-release?groups=cf-release)
+* [Continuous Integration Pipeline](https://release-integration.ci.cf-app.com/teams/main/pipelines/cf-release)
 * [Mailing List](https://lists.cloudfoundry.org/archives/list/cf-dev@lists.cloudfoundry.org/)
 
 #### Table of Contents
@@ -40,7 +40,7 @@ This repository is structured for use with [BOSH](http://github.com/cloudfoundry
 - **packages**: packaging instructions used by BOSH to build each of the dependencies.
 - **src**: the source code for the components in Cloud Foundry. Note that each of the components is a submodule with a pointer to a specific SHA.
 - **releases**: yml files containing the references to blobs for each package in a given release; these are solved within **.final_builds**
-- **.final_builds**: references into the public blostore for final jobs & packages (each referenced by one or more **releases**)
+- **.final_builds**: references into the public blobstore for final jobs & packages (each referenced by one or more **releases**)
 - **config**: URLs and access credentials to the bosh blobstore for storing final releases
 - **git**: Local git hooks
 
