@@ -46,7 +46,7 @@ fi
 common_name_path=$(echo $common_name | tr ' ' _)
 
 certstrap --depot-path "${depot_path}" request-cert --passphrase '' --common-name "${common_name}" ${domain_argument}
-certstrap --depot-path "${depot_path}" sign "${common_name_path}" --CA "${ca_name}"
+certstrap --depot-path "${depot_path}" sign "${common_name_path}" --CA "${ca_name}" --expires "50 years"
 mv -f "${depot_path}/${common_name_path}.key" "${depot_path}/${output_path}.key"
 mv -f "${depot_path}/${common_name_path}.csr" "${depot_path}/${output_path}.csr"
 mv -f "${depot_path}/${common_name_path}.crt" "${depot_path}/${output_path}.crt"

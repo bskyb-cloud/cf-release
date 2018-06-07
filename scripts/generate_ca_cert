@@ -33,7 +33,7 @@ if [ "${common_name}" == "" -o "${depot_path}" == "" -o "${output_path}" == "" ]
   show_help
 fi
 
-certstrap --depot-path "${depot_path}" init --passphrase '' --common-name "${common_name}"
+certstrap --depot-path "${depot_path}" init --passphrase '' --common-name "${common_name}" --expires "50 years"
 mv -f "${depot_path}/$common_name.crt" "${depot_path}/$output_path.crt"
 mv -f "${depot_path}/$common_name.key" "${depot_path}/$output_path.key"
 mv -f "${depot_path}/$common_name.crl" "${depot_path}/$output_path.crl"
